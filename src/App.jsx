@@ -4,6 +4,7 @@ import { Route, Routes, useLocation } from "react-router";
 import Nav from "./component/Nav";
 import Footer from "./component/Footer";
 import About from "./pages/AboutPage";
+import Contact from "./pages/Contact";
 import Shop from "./pages/Shop";
 import Home from "./pages/Home";
 import ProductDetail from "./pages/ProductDetail";
@@ -53,6 +54,7 @@ const App = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/shop/:productId" element={<ProductDetail />} />
 

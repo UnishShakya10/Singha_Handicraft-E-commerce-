@@ -27,14 +27,11 @@ import { statueCategories } from "../data/statueCategories";
 // helper: makes a link like /shop?category=Green%20Tara
 const catUrl = (name) => `/shop?category=${encodeURIComponent(name)}`;
 const Nav = () => {
-  const whatsappContactUrl = "https://wa.me/977XXXXXXXXXX?text=" + encodeURIComponent("Hello Singha Handicraft, I would like to learn more.");
-
   // Links with no dropdown
   const simpleLinks = {
     home: { label: "Home", to: "/" },
     lifeSize: { label: "Life-Size Statues", to: catUrl("Life-Size Statues") },
     bundle: { label: "Bundle & Save", to: catUrl("Bundle Packs") },
-    contact: { label: "Contact Us", to: whatsappContactUrl },
   };
 
   // Links with a dropdown
@@ -61,7 +58,6 @@ const Nav = () => {
     simpleLinks.lifeSize,
     simpleLinks.bundle,
     dropdowns.about,
-    simpleLinks.contact,
   ];
 
 // ---------- SMALL PIECES ----------

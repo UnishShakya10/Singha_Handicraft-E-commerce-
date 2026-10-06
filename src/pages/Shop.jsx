@@ -19,6 +19,7 @@ const emptyForm = {
   image: "/Manjushree.webp",
   imageUrl: "",
   imageFile: null,
+  extraImageFiles: [],
   // new fields
   description: "",
   iconography: "",
@@ -82,6 +83,10 @@ const Shop = ({ adminMode = false }) => {
     reader.readAsDataURL(file);
   };
 
+  const handleExtraImageFiles = (files) => {
+    updateField("extraImageFiles", Array.from(files || []));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSavingProduct(true);
@@ -95,13 +100,18 @@ const Shop = ({ adminMode = false }) => {
         .split("\n")
         .map((url) => url.trim())
         .filter(Boolean);
+      const uploadedExtraImages = await Promise.all(
+        form.extraImageFiles.map((file) => uploadImage(file))
+      );
 
       const productData = {
         name: form.title,
         slug: editingProduct?.slug || `${form.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`,
         price: Number(form.price),
         stock: Number(form.stock),
-        images: image ? [image, ...extraImages] : extraImages,
+        images: image
+          ? [image, ...extraImages, ...uploadedExtraImages]
+          : [...extraImages, ...uploadedExtraImages],
         category: form.category,
         collection: form.collection,
         material: form.material,
@@ -521,13 +531,32 @@ const Shop = ({ adminMode = false }) => {
                 {/* NEW: extra photos */}
                 <Textarea
                   label="More photos (optional)"
-                  description="One image URL per line. These become the thumbnails on the product page."
+                  description="Add one image URL per line, or upload several images below."
                   placeholder={"https://example.com/side-view.jpg\nhttps://example.com/back-view.jpg"}
                   minRows={3}
                   autosize
                   value={form.extraImages}
                   onChange={(event) => updateField("extraImages", event.currentTarget.value)}
                 />
+                <div>
+                  <Text size="sm" fw={500} mb={6}>Upload gallery images</Text>
+                  <FileButton
+                    onChange={handleExtraImageFiles}
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    multiple
+                  >
+                    {(props) => (
+                      <Button {...props} type="button" variant="light" color="dark">
+                        Choose gallery images
+                      </Button>
+                    )}
+                  </FileButton>
+                  {form.extraImageFiles.length > 0 && (
+                    <Text size="xs" c="dimmed" mt="xs">
+                      {form.extraImageFiles.map((file) => file.name).join(", ")}
+                    </Text>
+                  )}
+                </div>
               </section>
             </div>
 

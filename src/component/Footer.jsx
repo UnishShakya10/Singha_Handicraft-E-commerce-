@@ -71,6 +71,9 @@ const Footer = () => {
               <Anchor component={Link} to="/about" c="gray.4" underline="hover">
                 About
               </Anchor>
+              <Anchor component={Link} to="/contact" c="gray.4" underline="hover">
+                Contact Us
+              </Anchor>
               <Text size="sm" c="gray.4">
                 @singhahandicraft
               </Text>

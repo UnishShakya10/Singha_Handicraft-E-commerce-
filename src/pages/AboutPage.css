@@ -357,14 +357,69 @@
 }
 
 .about-collection-track {
-  display: grid;
-  grid-auto-columns: minmax(205px, 1fr);
-  grid-auto-flow: column;
+  display: flex;
+  width: max-content;
   gap: 18px;
-  overflow-x: auto;
-  padding-bottom: 10px;
-  scrollbar-color: #a38b60 transparent;
-  scrollbar-width: thin;
+  --collection-gap-half: 9px;
+  animation: about-collections-scroll 42s linear infinite;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+}
+
+.about-collections .about-shell {
+  overflow: hidden;
+}
+
+.about-collection-track:hover,
+.about-collection-track:focus-within {
+  animation-play-state: paused;
+}
+
+.about-collection-track .about-collection-reveal {
+  flex: 0 0 clamp(205px, 22vw, 280px);
+}
+
+@keyframes about-collections-scroll {
+  to {
+    transform: translateX(calc(-50% - var(--collection-gap-half)));
+  }
+}
+
+@media (max-width: 700px) {
+  .about-collection-track {
+    gap: 14px;
+    --collection-gap-half: 7px;
+    animation-duration: 36s;
+  }
+
+  .about-collection-track .about-collection-reveal {
+    flex-basis: 72vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-collections .about-shell {
+    overflow: visible;
+  }
+
+  .about-collection-track {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    animation: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .about-collection-track .about-collection-reveal {
+    flex-basis: clamp(205px, 22vw, 280px);
+  }
+}
+
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .about-collection-track .about-collection-reveal {
+    flex-basis: 72vw;
+  }
 }
 
 .about-collection-reveal {
@@ -749,13 +804,6 @@
 
   .about-collections-heading > p {
     margin-top: 16px;
-  }
-
-  .about-collection-track {
-    grid-auto-columns: minmax(220px, 72vw);
-    gap: 14px;
-    margin-right: -20px;
-    padding-right: 20px;
   }
 
   .about-collection-image {

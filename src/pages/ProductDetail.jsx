@@ -7,18 +7,25 @@ import {
   Container,
   Grid,
   Group,
-  Image,
   List,
   SimpleGrid,
   Stack,
   Text,
   Title,
 } from "@mantine/core";
-import { ArrowLeft, Check, MessageCircle, ShoppingBag } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Heart,
+  MessageCircle,
+  ShoppingBag,
+} from "lucide-react";
 import { useProducts } from "../context/ProductContext";
 import { useCart } from "../context/CartContext";
+import { useWishlist } from "../context/WishlistContext";
 import { formatPrice } from "../lib/api";
 import Cards from "../component/Cards";
+import ProductGallery from "../component/ProductGallery";
 
 // Replace with your number in international format, digits only (no +)
 const WHATSAPP_NUMBER = "977XXXXXXXXXX";
@@ -48,7 +55,7 @@ const ProductDetail = () => {
   const { productId } = useParams();
   const { products } = useProducts();
   const { addItem } = useCart();
-  const [activeImage, setActiveImage] = useState(0);
+  const { isSaved, toggleItem } = useWishlist();
   const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   const product = products.find((item) => item.id === productId && item.isActive !== false);
@@ -72,6 +79,7 @@ const ProductDetail = () => {
     );
   }
 
+  const isProductSaved = isSaved(product.id);
   const detailSections = [
     ["Description", product.description?.trim() || "Description details have not been provided for this piece yet."],
     ["Iconography", product.iconography?.trim() || "Iconography details have not been provided for this piece yet."],
@@ -83,7 +91,11 @@ const ProductDetail = () => {
     ],
   ];
   const hasLongDetails = detailSections.reduce((total, [, content]) => total + content.length, 0) > 700;
-  const images = product.images?.length ? product.images : [product.image];
+  const images = product.images?.length
+    ? product.images
+    : product.image
+      ? [product.image]
+      : [];
 
   const related = products
     .filter(
@@ -129,46 +141,16 @@ const ProductDetail = () => {
         <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={64} style={{ alignItems: "start" }}>
           {/* LEFT: gallery (stays in view while you scroll on desktop) */}
           <div style={{ position: "sticky", top: 110 }}>
-            <div
-              style={{
-                background: CREAM,
-                border: `1px solid ${LINE}`,
-                borderRadius: 4,
-                padding: 12,
-                boxShadow: "0 24px 60px rgba(20,17,13,0.12)",
-              }}
-            >
-              <Image
-                src={images[activeImage]}
-                alt={product.title}
-                h={{ base: 400, md: 600 }}
-                fit="contain"
-                radius="sm"
-                bg="white"
+            {images.length > 0 ? (
+              <ProductGallery
+                key={product.id}
+                images={images}
+                name={product.title}
               />
-            </div>
-
-            {images.length > 1 && (
-              <Group mt="md" gap="sm">
-                {images.map((img, i) => (
-                  <Image
-                    key={img + i}
-                    src={img}
-                    alt={`${product.title} view ${i + 1}`}
-                    w={80}
-                    h={80}
-                    fit="cover"
-                    radius="sm"
-                    onClick={() => setActiveImage(i)}
-                    style={{
-                      cursor: "pointer",
-                      border: i === activeImage ? `2px solid ${GOLD}` : `2px solid ${LINE}`,
-                      opacity: i === activeImage ? 1 : 0.65,
-                      transition: "opacity 200ms, border-color 200ms",
-                    }}
-                  />
-                ))}
-              </Group>
+            ) : (
+              <div className="grid aspect-square place-items-center bg-white text-gray-500">
+                No product images available
+              </div>
             )}
           </div>
 
@@ -223,6 +205,26 @@ const ProductDetail = () => {
                 onClick={() => addItem(product)}
               >
                 Add to cart
+              </Button>
+              <Button
+                variant="outline"
+                color={isProductSaved ? "red" : "dark"}
+                size="lg"
+                radius="xs"
+                tt="uppercase"
+                lts={1.5}
+                fz="sm"
+                px={36}
+                leftSection={
+                  <Heart
+                    size={18}
+                    fill={isProductSaved ? "currentColor" : "none"}
+                  />
+                }
+                aria-pressed={isProductSaved}
+                onClick={() => toggleItem(product)}
+              >
+                {isProductSaved ? "Saved to wishlist" : "Add to wishlist"}
               </Button>
               <Button
                 component="a"

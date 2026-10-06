@@ -1,7 +1,6 @@
 import { Link } from "react-router";
 import {
   ActionIcon,
-  Badge,
   Button,
   Card,
   Group,
@@ -57,19 +56,6 @@ const Cards = ({ product, onDelete }) => {
     >
       <div style={{ position: "relative" }}>
         <Image src={product.image} alt={product.title} h={260} fit="cover" />
-
-        <Badge
-          pos="absolute"
-          top={14}
-          left={14}
-          color="gold"
-          c="black"
-          fw={700}
-          tt="uppercase"
-          variant="light"
-        >
-          {product.category || "Sacred piece"}
-        </Badge>
 
         <ActionIcon
           pos="absolute"

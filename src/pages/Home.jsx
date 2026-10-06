@@ -1,8 +1,6 @@
 import { Link } from "react-router";
 import {
-  Badge,
   Button,
-  Card,
   Container,
   Group,
   Image,
@@ -16,19 +14,11 @@ import Cards from "../component/Cards";
 import Category from "../component/Category";
 import { useProducts } from "../context/ProductContext";
 
-const galleryItems = [
-  { id: 1, title: "Thangtong Gyalpo", category: "Premium", image: "/ThangtongGyalpo.webp" },
-  { id: 2, title: "Zhabdung statue", category: "Bronze", image: "/zhabdung.webp" },
-  { id: 3, title: "Handcrafted Buddha", category: "Gold", image: "/Manjushree.webp" },
-  { id: 4, title: "Traditional craft", category: "Premium", image: "/Avalokiteshvara.webp" },
-  { id: 5, title: "Carved woodwork", category: "Affordable", image: "/lokeshwora.webp" },
-  { id: 6, title: "Handmade statue", category: "Gold", image: "/21TaraStatue.webp" },
-  { id: 7, title: "Traditional Nepalese art", category: "Bronze", image: "/chengrezig.webp" },
-  { id: 8, title: "Decorative metal art", category: "Affordable", image: "/kubera.webp" },
-];
-
 const Home = () => {
   const { products } = useProducts();
+  const galleryItems = products
+    .filter((product) => product.isActive !== false && product.image)
+    .slice(0, 12);
   const featured = products
     .filter((product) => product.isActive !== false && product.collection === "best-sellers")
     .slice(0, 4);
@@ -208,22 +198,34 @@ const Home = () => {
 
           <Category />
 
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
-            {galleryItems.map((item) => (
-              <Card key={item.id} padding={0} radius="sm" pos="relative" bg="white" withBorder className="gallery-tile">
-                <Image src={item.image} alt={item.title} h={300} fit="cover" />
-                <div className="gallery-tile-overlay" />
-                <div className="gallery-tile-caption">
-                  <Badge color="gold" variant="light" tt="uppercase" fw={700}>
-                    {item.category}
-                  </Badge>
-                  <Title order={3} c="white" mt={8} lh={1.2}>
+          <div className="grid auto-rows-[120px] grid-flow-dense grid-cols-2 gap-3 sm:auto-rows-[150px] sm:grid-cols-4 md:gap-4">
+            {galleryItems.map((item, index) => (
+              <Link
+                key={item.id}
+                to={`/shop/${item.id}`}
+                aria-label={`View ${item.title}`}
+                className={`group relative block overflow-hidden bg-black ${
+                  [0, 3, 6].includes(index)
+                    ? "col-span-2 row-span-2"
+                    : "col-span-1 row-span-1"
+                }`}
+              >
+                <Image
+                  src={item.image}
+                  alt={item.title}
+                  h="100%"
+                  fit="cover"
+                  className="absolute inset-0 h-full w-full transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-transparent transition-colors group-hover:from-black/85" />
+                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                  <Title order={3} c="white" lh={1.2} fz={{ base: "md", sm: "xl" }}>
                     {item.title}
                   </Title>
                 </div>
-              </Card>
+              </Link>
             ))}
-          </SimpleGrid>
+          </div>
         </Container>
       </section>
     </div>

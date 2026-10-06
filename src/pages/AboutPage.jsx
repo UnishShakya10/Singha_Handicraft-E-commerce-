@@ -17,6 +17,12 @@ const collections = [
   { title: "Kubera", image: "/kubera.webp", alt: "Kubera statue from the collection", category: "Wealth Deities" },
   { title: "21 Tara", image: "/21TaraStatue.webp", alt: "21 Tara statue from the collection", category: "Tara" },
   { title: "Zhabdrung", image: "/zhabdung.webp", alt: "Zhabdrung statue from the collection", category: "Buddhist Masters" },
+   { title: "Gautam Buddha", image: "/Golden Buddha Shrine with Incense and Candlelight.png", alt: "Golden Gautam Buddha statue in a Himalayan shrine", category: "Buddha" },
+  { title: "Chenrezig", image: "/chengrezig.webp", alt: "Chenrezig Buddhist statue", category: "Chenrezig" },
+  { title: "Manjushree", image: "/Manjushree.webp", alt: "Manjushree Buddhist statue", category: "Manjushri" },
+  { title: "Kubera", image: "/kubera.webp", alt: "Kubera statue from the collection", category: "Wealth Deities" },
+  { title: "21 Tara", image: "/21TaraStatue.webp", alt: "21 Tara statue from the collection", category: "Tara" },
+  { title: "Zhabdrung", image: "/zhabdung.webp", alt: "Zhabdrung statue from the collection", category: "Buddhist Masters" },
 ];
 
 const features = [
@@ -195,13 +201,23 @@ const Collections = () => (
         </div>
         <p>Explore sacred forms shaped by centuries of devotion and artistry.</p>
       </Reveal>
-      <div className="about-collection-track">
+      <div
+        className="about-collection-track"
+        role="region"
+        aria-label="Featured collections, automatically scrolling"
+      >
         {collections.map((item, index) => (
-          <Reveal key={item.title} className="about-collection-reveal" delay={index * 65}>
+          <Reveal
+            key={`${item.category}-${index}`}
+            className="about-collection-reveal"
+            delay={index < collections.length ? index * 65 : 0}
+          >
             <Link
               className="about-collection"
               to={`/shop?category=${encodeURIComponent(item.category)}`}
               aria-label={`Explore ${item.title} statues`}
+              aria-hidden={index >= collections.length || undefined}
+              tabIndex={index >= collections.length ? -1 : undefined}
             >
               <div className="about-collection-image">
                 <img src={item.image} alt={item.alt} loading="lazy" />

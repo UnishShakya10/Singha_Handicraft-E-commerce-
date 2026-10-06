@@ -6,17 +6,29 @@ import { useAuth } from "./AuthContext";
 
 const ProductContext = createContext(null);
 
-const mapProduct = (product) => ({
-  ...product,
-  id: product._id || product.id,
-  title: product.name || product.title,
-  image: fileUrl(product.images?.[0] || product.image),
-  categoryId: product.category?._id || product.categoryId || "",
-  category: product.category?.name || product.category,
-  material: product.material || "Handcrafted",
-  collection: product.collection || "new",
-  isActive: product.isActive !== false,
-});
+const mapProduct = (product) => {
+  const images = (product.images?.length
+    ? product.images
+    : product.image
+      ? [product.image]
+      : []
+  )
+    .map(fileUrl)
+    .filter(Boolean);
+
+  return {
+    ...product,
+    id: product._id || product.id,
+    title: product.name || product.title,
+    image: images[0] || "",
+    images,
+    categoryId: product.category?._id || product.categoryId || "",
+    category: product.category?.name || product.category,
+    material: product.material || "Handcrafted",
+    collection: product.collection || "new",
+    isActive: product.isActive !== false,
+  };
+};
 
 export const ProductProvider = ({ children }) => {
   const { role } = useAuth();
