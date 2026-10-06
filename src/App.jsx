@@ -15,7 +15,7 @@ import AdminDashboard from "./admin/AdminDashboard";
 import LoginPage from "./sign/login/LoginPage";
 import SignupPage from "./sign/login/SignupPage";
 import PrivateRoute from "./routes/PrivateRoute";
-import AdminRoute from "./component/AdminRoute";
+import AdminRoute from "./routes/AdminRoute";
 
 const App = () => {
   const { pathname, hash } = useLocation();

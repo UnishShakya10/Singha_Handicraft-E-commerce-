@@ -1,6 +1,7 @@
 import axios from "axios";
 
-export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
+export const API_BASE =
+  import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -9,17 +10,31 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   return config;
 });
 
 export const fileUrl = (path) => {
   if (!path) return "";
-  const normalizedPath = String(path).trim().replace(/^['"]|['"]$/g, "");
-  if (/^https?:\/\//i.test(normalizedPath) || normalizedPath.startsWith("data:")) {
+
+  const normalizedPath = String(path)
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
+
+  if (
+    /^https?:\/\//i.test(normalizedPath) ||
+    normalizedPath.startsWith("data:")
+  ) {
     return normalizedPath;
   }
-  return `${API_BASE}${normalizedPath.startsWith("/") ? normalizedPath : `/${normalizedPath}`}`;
+
+  return `${API_BASE}${
+    normalizedPath.startsWith("/") ? normalizedPath : `/${normalizedPath}`
+  }`;
 };
 
 export const formatPrice = (amount) =>
