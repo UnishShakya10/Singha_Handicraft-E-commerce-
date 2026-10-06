@@ -17,13 +17,32 @@ const collections = [
   { title: "Kubera", image: "/kubera.webp", alt: "Kubera statue from the collection", category: "Wealth Deities" },
   { title: "21 Tara", image: "/21TaraStatue.webp", alt: "21 Tara statue from the collection", category: "Tara" },
   { title: "Zhabdrung", image: "/zhabdung.webp", alt: "Zhabdrung statue from the collection", category: "Buddhist Masters" },
-   { title: "Gautam Buddha", image: "/Golden Buddha Shrine with Incense and Candlelight.png", alt: "Golden Gautam Buddha statue in a Himalayan shrine", category: "Buddha" },
-  { title: "Chenrezig", image: "/chengrezig.webp", alt: "Chenrezig Buddhist statue", category: "Chenrezig" },
-  { title: "Manjushree", image: "/Manjushree.webp", alt: "Manjushree Buddhist statue", category: "Manjushri" },
-  { title: "Kubera", image: "/kubera.webp", alt: "Kubera statue from the collection", category: "Wealth Deities" },
-  { title: "21 Tara", image: "/21TaraStatue.webp", alt: "21 Tara statue from the collection", category: "Tara" },
-  { title: "Zhabdrung", image: "/zhabdung.webp", alt: "Zhabdrung statue from the collection", category: "Buddhist Masters" },
+  { title: "Thangtong Gyalpo", image: "/ThangtongGyalpo.webp", alt: "Thangtong Gyalpo statue", category: "Buddhist Masters" },
+  { title: "Avalokiteshvara", image: "/Avalokiteshvara.webp", alt: "Avalokiteshvara statue", category: "Chenrezig" },
+  { title: "Lokeshwora", image: "/lokeshwora.webp", alt: "Lokeshwora statue", category: "Chenrezig" },
+  { title: "Tara", image: "/Tara.jpg", alt: "Tara statue", category: "Tara" },
+  { title: "Standing Buddha", image: "/standing buddha.jpg", alt: "Standing Buddha statue", category: "Buddha" },
+  { title: "Shiva", image: "/shiva.jpg", alt: "Shiva statue", category: "Buddha" },
+  { title: "Padampa Sangye", image: "/padampa Sangye.jpg", alt: "Padampa Sangye statue", category: "Buddhist Masters" },
+  { title: "Milarepa", image: "/Milarepa.webp", alt: "Milarepa statue", category: "Buddhist Masters" },
+  { title: "Mahakaal", image: "/mahakaal.webp", alt: "Mahakaal statue", category: "Buddhist Masters" },
+  { title: "Vajrapani", image: "/vajrapani.webp", alt: "Vajrapani statue", category: "Buddhist Masters" },
+  { title: "Bhairava", image: "/bhairava.jpg", alt: "Bhairava statue", category: "Buddhist Masters" },
+  { title: "Garudha", image: "/garudha.jpg", alt: "Garudha statue", category: "Buddhist Masters" },
+  { title: "Green Tara", image: "/green tara.jpg", alt: "Green Tara statue", category: "Tara" },
+  { title: "Gold Green Tara", image: "/green tara gold.jpg", alt: "Gold-finished Green Tara statue", category: "Tara" },
+  { title: "21 Tara Collection", image: "/21 tara set.jpg", alt: "A collection of Tara statues", category: "Tara" },
+  { title: "Golden Statue", image: "/FB_IMG_1626536351262.jpg", alt: "Golden multi-armed statue", category: "Buddhist Masters" },
+  { title: "Seated Statue", image: "/FB_IMG_1627178426969.jpg", alt: "Seated Buddhist statue", category: "Buddhist Masters" },
+  { title: "Chundi", image: "/IMG-78b694c9794d8d57bdc65cff7202d79f-V.jpg", alt: "Chundi statue", category: "Buddhist Masters" },
+  { title: "Golden Master", image: "/IMG-73db016991687f93c1625d2512fef9f2-V.jpg", alt: "Golden statue of a Buddhist master", category: "Buddhist Masters" },
+  { title: "Miniature Buddhas", image: "/mini.webp", alt: "Three miniature Buddha statues", category: "Buddha" },
+  { title: "Manjushree", image: "/manjushree.jpg", alt: "Manjushree statue", category: "Manjushri" },
+  { title: "Hand-carved Statue Detail", image: "/face carving.jpg", alt: "Close-up detail of a hand-carved statue", category: "Buddhist Masters" },
+  { title: "Avalokiteshvara", image: "/avalokeshora.jpg", alt: "Avalokiteshvara statue", category: "Chenrezig" },
+  { title: "Sacred Statue", image: "/il_600x600.5303394705_l5b7.webp", alt: "Handcrafted sacred statue", category: "Buddhist Masters" },
 ];
+const scrollingCollections = [...collections, ...collections];
 
 const features = [
   {
@@ -206,29 +225,35 @@ const Collections = () => (
         role="region"
         aria-label="Featured collections, automatically scrolling"
       >
-        {collections.map((item, index) => (
+        {scrollingCollections.map((item, index) => {
+          const isRepeated = index >= collections.length;
+          const collectionNumber = (index % collections.length) + 1;
+
+          return (
           <Reveal
-            key={`${item.category}-${index}`}
+            key={`${item.image}-${index}`}
             className="about-collection-reveal"
-            delay={index < collections.length ? index * 65 : 0}
+            delay={isRepeated ? 0 : index * 65}
           >
             <Link
               className="about-collection"
               to={`/shop?category=${encodeURIComponent(item.category)}`}
               aria-label={`Explore ${item.title} statues`}
-              aria-hidden={index >= collections.length || undefined}
-              tabIndex={index >= collections.length ? -1 : undefined}
+              aria-hidden={isRepeated || undefined}
+              tabIndex={isRepeated ? -1 : undefined}
             >
               <div className="about-collection-image">
                 <img src={item.image} alt={item.alt} loading="lazy" />
                 <span className="about-collection-arrow"><ArrowRight size={18} /></span>
               </div>
               <div className="about-collection-title">
-                <span>{item.title}</span><span>0{index + 1}</span>
+                <span>{item.title}</span>
+                <span>{String(collectionNumber).padStart(2, "0")}</span>
               </div>
             </Link>
           </Reveal>
-        ))}
+          );
+        })}
       </div>
     </div>
   </section>
