@@ -6,6 +6,7 @@ const configuredApiUrl = new URL(
 const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 
 if (
+  import.meta.env.DEV &&
   typeof window !== "undefined" &&
   loopbackHosts.has(configuredApiUrl.hostname.toLowerCase()) &&
   !loopbackHosts.has(window.location.hostname.toLowerCase())
