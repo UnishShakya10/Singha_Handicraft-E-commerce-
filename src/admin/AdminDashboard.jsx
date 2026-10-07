@@ -495,6 +495,7 @@
                   }}
                   centered
                   size="sm"
+                  radius="md"
                   title={<Title order={3}>Delete category?</Title>}
                 >
                   <Stack gap="md">
