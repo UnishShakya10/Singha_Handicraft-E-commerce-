@@ -16,6 +16,6 @@ npm install
 npm run dev
 ```
 
-Optional: set `VITE_API_URL` if the user API is not at `http://localhost:8080`.
+Local development uses `http://localhost:8080` by default. Production builds use the deployed API at `https://singha-handicraft-backend.onrender.com`; set `VITE_API_URL` in the deployment environment if the API is hosted elsewhere.
 
-When opening the site from another device, the API must be reachable from that device. If `VITE_API_URL` is unset or points to a loopback host such as `localhost`, the app uses the hostname and protocol used to open the site, keeping API calls and uploaded images on the same reachable host. If the API is hosted separately, set `VITE_API_URL` to its publicly reachable URL and redeploy.
+In local development, loopback API URLs are adjusted to the hostname used to open the site so other devices on the same network can reach the development API. Production defaults to the deployed Render API above. Existing product catalog images are bundled under `public/uploads` and served by Vercel. New uploads made through the admin panel still use the backend's local disk and are not persistent across Render restarts; use direct image URLs or a persistent image-storage service for new production uploads.

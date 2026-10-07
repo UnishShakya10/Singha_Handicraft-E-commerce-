@@ -1,0 +1,26 @@
+const imageExtensions = {
+  "0542e860f18db77dda5f03276b47b512": "webp",
+  "14fe936255cd6717b4abf7baad9295b8": "webp",
+  "255338bef13283ecab8b9ae369198c02": "jpg",
+  "2671ec7bc1e1b127b714f976d9154721": "jpg",
+  "4005cc66cc49b72cabd5caa61d0eec5b": "jpg",
+  "478ce9b980f274560d1e5e5fc5f4d2f3": "webp",
+  "4bbd56a5858c1e0638eb1dc06baf519e": "webp",
+  "4c5b43feb7b738bcb0e84dfdf3f73b72": "jpg",
+  "62a73eb3a291316eb39197b4d3c312aa": "jpg",
+  "63a9149c8188da1661271064d8297790": "jpg",
+  "6c51c09e1a1d42640bcf2f93a99e52a4": "jpg",
+  "72e9f816d4d6c3091d6b6fd8cc80c29f": "jpg",
+  "7d5ebcd5b7620fd2a07f4a8e404600a2": "jpg",
+  "860df4246c1940faf1037bf046677ca7": "webp",
+  "95135fc8b68a734d72e4885a8383b859": "png",
+  "9cf11f5eaccfb274c029290a323ab8f7": "jpg",
+  "a52222a0af76c76e66b73c09bfff2f04": "webp",
+  "b9397979115c839f53941e581f825eb7": "jpg",
+  "dc24d87ba7baa4f696e45e23a396a503": "jpg",
+  "de7759dfbcc2d3a36cc80f672cce4cab": "jpg",
+  "ebca599ad54f9db9a3e4464caf633101": "jpg",
+  "f22d9ae77e36b9b06356f8904332756c": "jpg",
+};
+
+export const uploadImageExtension = (filename) => imageExtensions[filename] || "";
