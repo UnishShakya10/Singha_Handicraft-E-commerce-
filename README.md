@@ -17,3 +17,5 @@ npm run dev
 ```
 
 Optional: set `VITE_API_URL` if the user API is not at `http://localhost:8080`.
+
+When opening the development site on a phone, the API must be reachable from that phone. Loopback API URLs such as `localhost` are resolved to the hostname used to open the site; for production, set `VITE_API_URL` to the publicly reachable API URL.

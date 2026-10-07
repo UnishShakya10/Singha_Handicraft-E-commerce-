@@ -1,7 +1,19 @@
 import axios from "axios";
 
-export const API_BASE =
-  import.meta.env.VITE_API_URL || "http://localhost:8080";
+const configuredApiUrl = new URL(
+  import.meta.env.VITE_API_URL || "http://localhost:8080"
+);
+const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+
+if (
+  typeof window !== "undefined" &&
+  loopbackHosts.has(configuredApiUrl.hostname.toLowerCase()) &&
+  !loopbackHosts.has(window.location.hostname.toLowerCase())
+) {
+  configuredApiUrl.hostname = window.location.hostname;
+}
+
+export const API_BASE = configuredApiUrl.toString().replace(/\/+$/, "");
 
 export const api = axios.create({
   baseURL: API_BASE,

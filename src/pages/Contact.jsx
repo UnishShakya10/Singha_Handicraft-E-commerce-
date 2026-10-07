@@ -56,22 +56,31 @@ const mapLinkUrl = `https://www.google.com/maps/search/?api=1&query=${COORDS}`;
 const Contact = () => {
   const [sent, setSent] = useState(false);
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+const handleSubmit = (event) => {
+  event.preventDefault();
 
-    const formData = new FormData(event.currentTarget);
-    const subject = `Website message from ${formData.get("name")}`;
-    const message = [
-      `Name: ${formData.get("name")}`,
-      `Email: ${formData.get("email")}`,
-      `Phone: ${formData.get("phone")}`,
-      "",
-      formData.get("message"),
-    ].join("\n");
+  const formData = new FormData(event.currentTarget);
+  const subject = `Website message from ${formData.get("name")}`;
 
-    window.location.href = `mailto:hello@singhahandicraft.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
-    setSent(true);
-  };
+  const message = [
+    `Name: ${formData.get("name")}`,
+    `Email: ${formData.get("email")}`,
+    `Phone: ${formData.get("phone")}`,
+    "",
+    formData.get("message"),
+  ].join("\n");
+
+  const gmailUrl =
+    `https://mail.google.com/mail/?view=cm&fs=1` +
+    `&to=hello@singhahandicraft.com` +
+    `&su=${encodeURIComponent(subject)}` +
+    `&body=${encodeURIComponent(message)}`;
+
+  window.open(gmailUrl, "_blank");
+
+  setSent(true);
+};
+
 
   return (<>
     <main className="bg-gradient-to-b from-[#f8f3e8] to-white">

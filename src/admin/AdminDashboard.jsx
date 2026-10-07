@@ -7,7 +7,7 @@
     ArrowUpRight, Boxes, ChevronLeft, ChevronRight, ClipboardList, LayoutDashboard, LogOut,
     Images, Package, Plus, RefreshCw, Shapes, Trash2, UsersRound,
   } from "lucide-react";
-  import { api, formatPrice } from "../lib/api";
+  import { api, fileUrl, formatPrice } from "../lib/api";
   import { useAuth } from "../context/AuthContext";
   import { useProducts } from "../context/ProductContext";
   import Shop from "../pages/Shop";
@@ -354,7 +354,7 @@
                             <Table.Tr key={cat._id}>
                               <Table.Td>
                                 {cat.image ? (
-                                  <Image src={cat.image} alt={cat.name} w={64} h={64} radius="md" fit="cover" />
+                                  <Image src={fileUrl(cat.image)} alt={cat.name} w={64} h={64} radius="md" fit="cover" />
                                 ) : (
                                   <span className="admin-category-image-placeholder" aria-label="No category image">
                                     <Images size={24} />
@@ -579,7 +579,7 @@
                           <Table.Tr key={c._id}>
                             <Table.Td>
                               <Group gap="sm" wrap="nowrap">
-                                <Image src={c.avatar || undefined} alt="" w={34} h={34} radius="xl" />
+                                <Image src={fileUrl(c.avatar) || undefined} alt="" w={34} h={34} radius="xl" />
                                 <Text size="sm" fw={600}>{c.fullName}</Text>
                               </Group>
                             </Table.Td>
