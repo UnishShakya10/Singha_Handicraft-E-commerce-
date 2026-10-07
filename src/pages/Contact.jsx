@@ -81,7 +81,6 @@ const handleSubmit = (event) => {
   setSent(true);
 };
 
-
   return (<>
     <main className="bg-gradient-to-b from-[#f8f3e8] to-white">
       <section className="mx-auto max-w-3xl px-6 pb-4 pt-16 text-center md:pt-24">
