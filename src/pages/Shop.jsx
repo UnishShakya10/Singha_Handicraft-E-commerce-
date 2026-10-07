@@ -491,7 +491,11 @@ const Shop = ({ adminMode = false }) => {
               <section className="product-editor-section">
                 <div>
                   <Text fw={700}>Product image</Text>
-                  <Text size="xs" c="dimmed">Use a direct image URL or upload an image file.</Text>
+                  <Text size="xs" c="dimmed">
+                    {import.meta.env.DEV
+                      ? "Use a direct image URL or upload an image file."
+                      : "Use a direct, publicly accessible image URL. Production file uploads require persistent image storage."}
+                  </Text>
                 </div>
                 <TextInput
                   label="Image URL"
@@ -501,71 +505,78 @@ const Shop = ({ adminMode = false }) => {
                   value={form.imageUrl}
                   onChange={(event) => updateField("imageUrl", event.currentTarget.value)}
                 />
-                <div>
-                  <Text size="sm" fw={500} mb={6}>Upload an image</Text>
-                  <FileButton
-                    onChange={handleImageFile}
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                  >
-                    {(props) => (
-                      <button
-                        {...props}
-                        type="button"
-                        className={`category-image-picker product-image-picker${imagePreview ? " has-image" : ""}`}
-                        aria-label={imagePreview ? "Change product image" : "Choose product image"}
-                      >
-                        {imagePreview ? (
-                          <>
-                            <img src={imagePreview} alt="Product image preview" />
-                            <span className="category-image-picker-change">
-                              <Images size={16} />
-                              Change image
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <Images size={34} strokeWidth={1.6} />
-                            <span>Choose a product image</span>
-                            <small>PNG, JPG, WebP, or GIF</small>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </FileButton>
-                </div>
+                {import.meta.env.DEV && (
+                  <div>
+                    <Text size="sm" fw={500} mb={6}>Upload an image</Text>
+                    <FileButton
+                      onChange={handleImageFile}
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                    >
+                      {(props) => (
+                        <button
+                          {...props}
+                          type="button"
+                          className={`category-image-picker product-image-picker${imagePreview ? " has-image" : ""}`}
+                          aria-label={imagePreview ? "Change product image" : "Choose product image"}
+                        >
+                          {imagePreview ? (
+                            <>
+                              <img src={imagePreview} alt="Product image preview" />
+                              <span className="category-image-picker-change">
+                                <Images size={16} />
+                                Change image
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Images size={34} strokeWidth={1.6} />
+                              <span>Choose a product image</span>
+                              <small>PNG, JPG, WebP, or GIF</small>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </FileButton>
+                  </div>
+                )}
 
-                {/* NEW: extra photos */}
                 <Textarea
                   label="More photos (optional)"
-                  description="Add one image URL per line, or upload several images below."
+                  description={
+                    import.meta.env.DEV
+                      ? "Add one image URL per line, or upload several images below."
+                      : "Add one direct, publicly accessible image URL per line."
+                  }
                   placeholder={"https://example.com/side-view.jpg\nhttps://example.com/back-view.jpg"}
                   minRows={3}
                   autosize
                   value={form.extraImages}
                   onChange={(event) => updateField("extraImages", event.currentTarget.value)}
                 />
-                <div>
-                  <Text size="sm" fw={500} mb={6}>Upload gallery images</Text>
-                  <Text size="xs" c="dimmed" mb="xs">
-                    Select multiple images at once, or choose more images again to add them.
-                  </Text>
-                  <FileButton
-                    onChange={handleExtraImageFiles}
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    multiple
-                  >
-                    {(props) => (
-                      <Button {...props} type="button" variant="light" color="dark">
-                        Choose gallery images
-                      </Button>
-                    )}
-                  </FileButton>
-                  {form.extraImageFiles.length > 0 && (
-                    <Text size="xs" c="dimmed" mt="xs">
-                      {form.extraImageFiles.map((file) => file.name).join(", ")}
+                {import.meta.env.DEV && (
+                  <div>
+                    <Text size="sm" fw={500} mb={6}>Upload gallery images</Text>
+                    <Text size="xs" c="dimmed" mb="xs">
+                      Select multiple images at once, or choose more images again to add them.
                     </Text>
-                  )}
-                </div>
+                    <FileButton
+                      onChange={handleExtraImageFiles}
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      multiple
+                    >
+                      {(props) => (
+                        <Button {...props} type="button" variant="light" color="dark">
+                          Choose gallery images
+                        </Button>
+                      )}
+                    </FileButton>
+                    {form.extraImageFiles.length > 0 && (
+                      <Text size="xs" c="dimmed" mt="xs">
+                        {form.extraImageFiles.map((file) => file.name).join(", ")}
+                      </Text>
+                    )}
+                  </div>
+                )}
               </section>
             </div>
 

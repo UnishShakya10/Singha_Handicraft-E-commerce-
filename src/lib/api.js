@@ -46,6 +46,14 @@ export const fileUrl = (path) => {
     return normalizedPath;
   }
 
+  if (
+    typeof window !== "undefined" &&
+    normalizedPath.startsWith("/") &&
+    !normalizedPath.startsWith("/uploads/")
+  ) {
+    return `${window.location.origin}${normalizedPath}`;
+  }
+
   if (/^https?:\/\//i.test(normalizedPath)) {
     const imageUrl = new URL(normalizedPath);
     if (
