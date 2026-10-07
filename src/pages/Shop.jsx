@@ -62,6 +62,9 @@ const Shop = ({ adminMode = false }) => {
   const [savingProduct, setSavingProduct] = useState(false);
   const [updatingProductId, setUpdatingProductId] = useState("");
   const [productMessage, setProductMessage] = useState("");
+  const [productDeletingId, setProductDeletingId] = useState("");
+  const [productToDelete, setProductToDelete] = useState(null);
+
   const [form, setForm] = useState(emptyForm);
   const [productPage, setProductPage] = useState(0);
   const productPageCount = Math.max(1, Math.ceil(products.length / ADMIN_PAGE_SIZE));
@@ -191,9 +194,24 @@ const Shop = ({ adminMode = false }) => {
     }
   };
 
-  const handleDeleteProduct = async (product) => {
-    if (window.confirm(`Delete ${product.title}?`)) {
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+
+    const product = productToDelete;
+
+    setProductDeletingId(product.id);
+    setProductMessage("");
+
+    try {
       await removeProduct(product.id);
+      setProductToDelete(null);
+      setProductMessage("Product deleted successfully.");
+    } catch (error) {
+      setProductMessage(
+        error.response?.data?.message || "Could not delete product."
+      );
+    } finally {
+      setProductDeletingId("");
     }
   };
 
@@ -215,7 +233,14 @@ const Shop = ({ adminMode = false }) => {
               <Text fw={700} size="sm">All products <Text span c="dimmed" fw={400}>({products.length})</Text></Text>
               <Text size="xs" c="dimmed">Prices in NPR</Text>
             </Group>
-            {productMessage && <Alert color="red" m="md">{productMessage}</Alert>}
+            {productMessage && !productToDelete && (
+              <Alert
+                color={productMessage === "Product deleted successfully." ? "teal" : "red"}
+                m="md"
+              >
+                {productMessage}
+              </Alert>
+            )}
             <Table.ScrollContainer minWidth={760}>
               <Table verticalSpacing="sm" highlightOnHover className="admin-table">
                 <Table.Thead>
@@ -267,7 +292,18 @@ const Shop = ({ adminMode = false }) => {
                           <ActionIcon variant="subtle" color="dark" aria-label={`Edit ${product.title}`} onClick={() => handleEditProduct(product)}>
                             <Pencil size={16} />
                           </ActionIcon>
-                          <ActionIcon variant="subtle" color="red" aria-label={`Delete ${product.title}`} onClick={() => handleDeleteProduct(product)}>
+                          <ActionIcon
+                            variant="subtle"
+                            color="red"
+                            aria-label={`Delete ${product.title}`}
+                            title={`Delete ${product.title}`}
+                            loading={productDeletingId === product.id}
+                            disabled={Boolean(productDeletingId)}
+                            onClick={() => {
+                              setProductMessage("");
+                              setProductToDelete(product);
+                            }}
+                          >
                             <Trash2 size={16} />
                           </ActionIcon>
                         </Group>
@@ -350,27 +386,30 @@ const Shop = ({ adminMode = false }) => {
       )}
 
       {showManagement && (
-        <Modal
-          opened={opened}
-          onClose={() => {
-            setOpened(false);
-            setEditingProduct(null);
-            setProductMessage("");
-          }}
-          title={(
-            <div>
-              <Text size="xs" fw={700} tt="uppercase" c="teal.7">Catalog / {editingProduct ? "Edit item" : "New item"}</Text>
-              <Title order={3}>{editingProduct ? "Edit product" : "Add product"}</Title>
-            </div>
-          )}
-          centered
-          size="xl"
-          radius="sm"
-          overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
-          classNames={{ body: "product-editor-modal-body" }}
-        >
-          <form className="product-editor-layout" onSubmit={handleSubmit}>
-            {productMessage && <Alert color="red" className="product-editor-message">{productMessage}</Alert>}
+        <>
+          <Modal
+            opened={opened}
+            onClose={() => {
+              setOpened(false);
+              setEditingProduct(null);
+              setProductMessage("");
+            }}
+            title={(
+              <div>
+                <Text size="xs" fw={700} tt="uppercase" c="teal.7">Catalog / {editingProduct ? "Edit item" : "New item"}</Text>
+                <Title order={3}>{editingProduct ? "Edit product" : "Add product"}</Title>
+              </div>
+            )}
+            centered
+            size="xl"
+            radius="sm"
+            overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
+            classNames={{ body: "product-editor-modal-body" }}
+          >
+            <form className="product-editor-layout" onSubmit={handleSubmit}>
+              {productMessage && !productToDelete && (
+                <Alert color="red" className="product-editor-message">{productMessage}</Alert>
+              )}
             <div className="product-editor-fields">
               <section className="product-editor-section">
                 <div>
@@ -570,8 +609,53 @@ const Shop = ({ adminMode = false }) => {
                 </Button>
               </div>
             </aside>
-          </form>
-        </Modal>
+            </form>
+          </Modal>
+
+          <Modal
+            opened={Boolean(productToDelete)}
+            onClose={() => {
+              if (!productDeletingId) {
+                setProductToDelete(null);
+                setProductMessage("");
+              }
+            }}
+            centered
+            size="sm"
+            radius="md"
+            title={<Title order={3}>Delete product?</Title>}
+          >
+            <Stack gap="md">
+              <Text>
+                Are you sure you want to delete{" "}
+                <Text span fw={700}>{productToDelete?.title}</Text>?
+                {" "}This action cannot be undone.
+              </Text>
+              {productMessage && productMessage !== "Product deleted successfully." && (
+                <Alert color="red">{productMessage}</Alert>
+              )}
+              <Group justify="flex-end">
+                <Button
+                  variant="default"
+                  disabled={Boolean(productDeletingId)}
+                  onClick={() => {
+                    setProductToDelete(null);
+                    setProductMessage("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  color="red"
+                  loading={productDeletingId === productToDelete?.id}
+                  onClick={handleDeleteProduct}
+                >
+                  Delete product
+                </Button>
+              </Group>
+            </Stack>
+          </Modal>
+        </>
       )}
     </div>
   );
