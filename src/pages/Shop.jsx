@@ -17,14 +17,12 @@ const emptyForm = {
   dimensionsCm: "",
   dimensionsInches: "",
   image: "/Manjushree.webp",
-  imageUrl: "",
   imageFile: null,
   extraImageFiles: [],
   // new fields
   description: "",
   iconography: "",
   significance: "",
-  extraImages: "", // one image URL per line
 };
 
 const convertDimensions = (value, fromUnit, toUnit) => {
@@ -72,7 +70,7 @@ const Shop = ({ adminMode = false }) => {
     currentProductPage * ADMIN_PAGE_SIZE,
     (currentProductPage + 1) * ADMIN_PAGE_SIZE
   );
-  const imagePreview = form.imageUrl.trim() || (editingProduct || form.imageFile ? form.image : "");
+  const imagePreview = editingProduct || form.imageFile ? form.image : "";
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   const handleImageFile = (file) => {
@@ -99,13 +97,7 @@ const Shop = ({ adminMode = false }) => {
     setProductMessage("");
 
     try {
-      const image = form.imageUrl.trim() || (form.imageFile ? await uploadImage(form.imageFile) : form.image);
-
-      // turn the textarea (one URL per line) into a list
-      const extraImages = form.extraImages
-        .split("\n")
-        .map((url) => url.trim())
-        .filter(Boolean);
+      const image = form.imageFile ? await uploadImage(form.imageFile) : form.image;
       const uploadedExtraImages = await Promise.all(
         form.extraImageFiles.map((file) => uploadImage(file))
       );
@@ -116,8 +108,8 @@ const Shop = ({ adminMode = false }) => {
         price: Number(form.price),
         stock: Number(form.stock),
         images: image
-          ? [image, ...extraImages, ...uploadedExtraImages]
-          : [...extraImages, ...uploadedExtraImages],
+          ? [image, ...uploadedExtraImages]
+          : uploadedExtraImages,
         category: form.category,
         collection: form.collection,
         material: form.material,
@@ -175,7 +167,7 @@ const Shop = ({ adminMode = false }) => {
       description: product.description || "",
       iconography: product.iconography || "",
       significance: product.significance || "",
-      extraImages: (product.images || []).slice(1).join("\n"),
+
     });
     setOpened(true);
   };
@@ -492,98 +484,71 @@ const Shop = ({ adminMode = false }) => {
                 <div>
                   <Text fw={700}>Product image</Text>
                   <Text size="xs" c="dimmed">
-                    {import.meta.env.DEV
-                      ? "Use a direct image URL or upload an image file."
-                      : "Use a direct, publicly accessible image URL. Production file uploads require persistent image storage."}
+                    Choose an image file to upload.
                   </Text>
                 </div>
-                <TextInput
-                  label="Image URL"
-                  placeholder="https://example.com/statue.jpg"
-                  type="url"
-                  radius="md"
-                  value={form.imageUrl}
-                  onChange={(event) => updateField("imageUrl", event.currentTarget.value)}
-                />
-                {import.meta.env.DEV && (
-                  <div>
-                    <Text size="sm" fw={500} mb={6}>Upload an image</Text>
-                    <FileButton
-                      onChange={handleImageFile}
-                      accept="image/png,image/jpeg,image/webp,image/gif"
-                    >
-                      {(props) => (
-                        <button
-                          {...props}
-                          type="button"
-                          className={`category-image-picker product-image-picker${imagePreview ? " has-image" : ""}`}
-                          aria-label={imagePreview ? "Change product image" : "Choose product image"}
-                        >
-                          {imagePreview ? (
-                            <>
-                              <img src={imagePreview} alt="Product image preview" />
-                              <span className="category-image-picker-change">
-                                <Images size={16} />
-                                Change image
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <Images size={34} strokeWidth={1.6} />
-                              <span>Choose a product image</span>
-                              <small>PNG, JPG, WebP, or GIF</small>
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </FileButton>
-                  </div>
-                )}
-
-                <Textarea
-                  label="More photos (optional)"
-                  description={
-                    import.meta.env.DEV
-                      ? "Add one image URL per line, or upload several images below."
-                      : "Add one direct, publicly accessible image URL per line."
-                  }
-                  placeholder={"https://example.com/side-view.jpg\nhttps://example.com/back-view.jpg"}
-                  minRows={3}
-                  autosize
-                  value={form.extraImages}
-                  onChange={(event) => updateField("extraImages", event.currentTarget.value)}
-                />
-                {import.meta.env.DEV && (
-                  <div>
-                    <Text size="sm" fw={500} mb={6}>Upload gallery images</Text>
-                    <Text size="xs" c="dimmed" mb="xs">
-                      Select multiple images at once, or choose more images again to add them.
-                    </Text>
-                    <FileButton
-                      onChange={handleExtraImageFiles}
-                      accept="image/png,image/jpeg,image/webp,image/gif"
-                      multiple
-                    >
-                      {(props) => (
-                        <Button {...props} type="button" variant="light" color="dark">
-                          Choose gallery images
-                        </Button>
-                      )}
-                    </FileButton>
-                    {form.extraImageFiles.length > 0 && (
-                      <Text size="xs" c="dimmed" mt="xs">
-                        {form.extraImageFiles.map((file) => file.name).join(", ")}
-                      </Text>
+                <div>
+                  <Text size="sm" fw={500} mb={6}>Upload an image</Text>
+                  <FileButton
+                    onChange={handleImageFile}
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                  >
+                    {(props) => (
+                      <button
+                        {...props}
+                        type="button"
+                        className={`category-image-picker product-image-picker${imagePreview ? " has-image" : ""}`}
+                        aria-label={imagePreview ? "Change product image" : "Choose product image"}
+                      >
+                        {imagePreview ? (
+                          <>
+                            <img src={imagePreview} alt="Product image preview" />
+                            <span className="category-image-picker-change">
+                              <Images size={16} />
+                              Change image
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <Images size={34} strokeWidth={1.6} />
+                            <span>Choose a product image</span>
+                            <small>PNG, JPG, WebP, or GIF; 10 MB max</small>
+                          </>
+                        )}
+                      </button>
                     )}
-                  </div>
-                )}
+                  </FileButton>
+                </div>
+
+                <div>
+                  <Text size="sm" fw={500} mb={6}>Upload gallery images</Text>
+                  <Text size="xs" c="dimmed" mb="xs">
+                    Select multiple images at once, or choose more images again to add them.
+                  </Text>
+                  <FileButton
+                    onChange={handleExtraImageFiles}
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    multiple
+                  >
+                    {(props) => (
+                      <Button {...props} type="button" variant="light" color="dark">
+                        Choose gallery images
+                      </Button>
+                    )}
+                  </FileButton>
+                  {form.extraImageFiles.length > 0 && (
+                    <Text size="xs" c="dimmed" mt="xs">
+                      {form.extraImageFiles.map((file) => file.name).join(", ")}
+                    </Text>
+                  )}
+                </div>
               </section>
             </div>
 
             <aside className="product-editor-preview">
               <Text size="xs" fw={700} tt="uppercase" c="dimmed">Preview</Text>
               <Image
-                src={form.imageUrl.trim() || form.image}
+                src={form.image}
                 alt={form.title ? `${form.title} preview` : "Product preview"}
                 h={250}
                 fit="contain"
