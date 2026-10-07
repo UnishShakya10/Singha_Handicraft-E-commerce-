@@ -37,10 +37,21 @@ export const fileUrl = (path) => {
     .trim()
     .replace(/^['"]|['"]$/g, "");
 
-  if (
-    /^https?:\/\//i.test(normalizedPath) ||
-    normalizedPath.startsWith("data:")
-  ) {
+  if (normalizedPath.startsWith("data:")) {
+    return normalizedPath;
+  }
+
+  if (/^https?:\/\//i.test(normalizedPath)) {
+    const imageUrl = new URL(normalizedPath);
+    if (
+      loopbackHosts.has(imageUrl.hostname.toLowerCase()) &&
+      !loopbackHosts.has(new URL(API_BASE).hostname.toLowerCase())
+    ) {
+      const apiUrl = new URL(API_BASE);
+      imageUrl.protocol = apiUrl.protocol;
+      imageUrl.host = apiUrl.host;
+      return imageUrl.toString();
+    }
     return normalizedPath;
   }
 
