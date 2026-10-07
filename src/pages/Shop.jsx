@@ -84,7 +84,13 @@ const Shop = ({ adminMode = false }) => {
   };
 
   const handleExtraImageFiles = (files) => {
-    updateField("extraImageFiles", Array.from(files || []));
+    const selectedFiles = Array.from(files || []);
+    if (selectedFiles.length === 0) return;
+
+    setForm((current) => ({
+      ...current,
+      extraImageFiles: [...current.extraImageFiles, ...selectedFiles],
+    }));
   };
 
   const handleSubmit = async (event) => {
@@ -540,6 +546,9 @@ const Shop = ({ adminMode = false }) => {
                 />
                 <div>
                   <Text size="sm" fw={500} mb={6}>Upload gallery images</Text>
+                  <Text size="xs" c="dimmed" mb="xs">
+                    Select multiple images at once, or choose more images again to add them.
+                  </Text>
                   <FileButton
                     onChange={handleExtraImageFiles}
                     accept="image/png,image/jpeg,image/webp,image/gif"
