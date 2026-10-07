@@ -39,11 +39,14 @@ const Nav = () => {
     statues: {
       label: "Statue Categories",
       to: "/shop",
-      items: statueCategories.map(({ label, children = [] }) => ({
-        label,
-        to: catUrl(label),
-        ...(children.length ? { children: children.map((child) => ({ label: child, to: catUrl(child) })) } : {}),
-      })),
+      items: [
+        { label: "All Statues", to: "/shop" },
+        ...statueCategories.map(({ label, children = [] }) => ({
+          label,
+          to: catUrl(label),
+          ...(children.length ? { children: children.map((child) => ({ label: child, to: catUrl(child) })) } : {}),
+        })),
+      ],
     },
     about: {
       label: "About Us", to :"/about"

@@ -25,8 +25,9 @@ const SearchModal = ({ opened, onClose }) => {
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
+    if (!q) return [];
+
     const activeProducts = products.filter((item) => item.isActive !== false);
-    if (!q) return activeProducts.slice(0, 6);
     return activeProducts.filter(
       (item) =>
         item.title.toLowerCase().includes(q) ||
@@ -52,11 +53,11 @@ const SearchModal = ({ opened, onClose }) => {
         autoFocus
       />
       <ScrollArea.Autosize mah={360} mt="sm">
-        {results.length === 0 ? (
+        {query.trim() && results.length === 0 ? (
           <Text c="dimmed" size="sm" ta="center" py="lg">
             No pieces match that search.
           </Text>
-        ) : (
+        ) : results.length > 0 ? (
           <Stack gap={4}>
             {results.map((item) => (
               <UnstyledButton
@@ -84,7 +85,7 @@ const SearchModal = ({ opened, onClose }) => {
               </UnstyledButton>
             ))}
           </Stack>
-        )}
+        ) : null}
       </ScrollArea.Autosize>
     </Modal>
   );

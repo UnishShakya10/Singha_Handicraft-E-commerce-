@@ -40,13 +40,13 @@ const Footer = () => {
               <Group gap="xs" wrap="nowrap" align="flex-start">
                 <MapPin size={16} color="#c9a227" />
                 <Text size="sm" c="gray.4">
-                  Patan Industrial Estate, Lalitpur, Nepal
+                  Singha Handicraft, Lalitpur, Nepal
                 </Text>
               </Group>
               <Group gap="xs">
                 <Phone size={16} color="#c9a227" />
                 <Text size="sm" c="gray.4">
-                  +977 1-5520000
+                  +977 9861616232
                 </Text>
               </Group>
               <Group gap="xs">
