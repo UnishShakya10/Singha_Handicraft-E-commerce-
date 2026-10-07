@@ -19,7 +19,7 @@ export const theme = createTheme({
   },
   fontFamily: "Outfit, sans-serif",
   headings: {
-    fontFamily: "Cormorant Garamond, serif",
+    fontFamily: "Playfair Display, serif",
     fontWeight: "600",
   },
   defaultRadius: "xs",

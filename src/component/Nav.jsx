@@ -195,7 +195,7 @@ const MenuDropdown = ({ item }) => (
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontFamily: "Cormorant Garamond, serif",
+                fontFamily: "Playfair Display, serif",
               }}
             >
               S

@@ -2,7 +2,7 @@
 
 @theme {
   --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
   --color-ink: #0b0b0b;
   --color-ink-soft: #15120f;
   --color-gold: #c9a227;
@@ -331,7 +331,7 @@ h3,
   border-radius: 3px;
   background: #d4bb76;
   color: #17291f;
-  font-family: "Cormorant Garamond", Georgia, serif;
+  font-family: "Playfair Display", Georgia, serif;
   font-size: 23px;
   font-weight: 700;
 }
@@ -502,7 +502,7 @@ h3,
 .admin-welcome .mantine-Title-root {
   margin: 6px 0;
   color: #1c332a;
-  font-family: "Cormorant Garamond", Georgia, serif;
+  font-family: "Playfair Display", Georgia, serif;
   font-size: 27px;
   font-weight: 600;
 }
