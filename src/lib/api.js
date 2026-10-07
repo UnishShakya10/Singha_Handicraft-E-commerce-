@@ -6,12 +6,12 @@ const configuredApiUrl = new URL(
 const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 
 if (
-  import.meta.env.DEV &&
   typeof window !== "undefined" &&
   loopbackHosts.has(configuredApiUrl.hostname.toLowerCase()) &&
   !loopbackHosts.has(window.location.hostname.toLowerCase())
 ) {
   configuredApiUrl.hostname = window.location.hostname;
+  configuredApiUrl.protocol = window.location.protocol;
 }
 
 export const API_BASE = configuredApiUrl.toString().replace(/\/+$/, "");
