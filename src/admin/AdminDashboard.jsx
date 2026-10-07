@@ -86,6 +86,7 @@
     const [categoryMessage, setCategoryMessage] = useState("");
     const [categorySaving, setCategorySaving] = useState(false);
     const [categoryDeletingId, setCategoryDeletingId] = useState("");
+    const [categoryToDelete, setCategoryToDelete] = useState(null);
     const [categoryModalOpened, setCategoryModalOpened] = useState(false);
     const [categoryPage, setCategoryPage] = useState(0);
 
@@ -164,18 +165,16 @@
       }
     };
 
-    const handleCategoryDelete = async (category) => {
-      const productCount = countProducts(category);
-      const warning = productCount
-        ? ` ${productCount} product(s) are assigned to this category.`
-        : "";
-      if (!window.confirm(`Delete category "${category.name}"?${warning}`)) return;
+    const handleCategoryDelete = async () => {
+      if (!categoryToDelete) return;
+      const category = categoryToDelete;
 
       setCategoryDeletingId(category._id);
       setCategoryMessage("");
       try {
         await removeCategory(category._id);
         setCategoryMessage(CATEGORY_DELETED);
+        setCategoryToDelete(null);
       } catch (error) {
         setCategoryMessage(errMsg(error, "Could not delete category."));
       } finally {
@@ -378,7 +377,10 @@
                                   title={`Delete ${cat.name}`}
                                   loading={categoryDeletingId === cat._id}
                                   disabled={Boolean(categoryDeletingId)}
-                                  onClick={() => handleCategoryDelete(cat)}
+                                  onClick={() => {
+                                    setCategoryMessage("");
+                                    setCategoryToDelete(cat);
+                                  }}
                                 >
                                   <Trash2 size={16} />
                                 </ActionIcon>
@@ -481,6 +483,54 @@
                       </Group>
                     </Stack>
                   </form>
+                </Modal>
+
+                <Modal
+                  opened={Boolean(categoryToDelete)}
+                  onClose={() => {
+                    if (!categoryDeletingId) {
+                      setCategoryToDelete(null);
+                      setCategoryMessage("");
+                    }
+                  }}
+                  centered
+                  size="sm"
+                  title={<Title order={3}>Delete category?</Title>}
+                >
+                  <Stack gap="md">
+                    <Text>
+                      Are you sure you want to delete{" "}
+                      <Text span fw={700}>{categoryToDelete?.name}</Text>?
+                    </Text>
+                    {categoryToDelete && countProducts(categoryToDelete) > 0 && (
+                      <Text c="red" size="sm">
+                        {countProducts(categoryToDelete)} product(s) are assigned to
+                        this category. Deleting it will not remove those products.
+                      </Text>
+                    )}
+                    {categoryMessage && categoryMessage !== CATEGORY_DELETED && (
+                      <Text c="red" size="sm">{categoryMessage}</Text>
+                    )}
+                    <Group justify="flex-end">
+                      <Button
+                        variant="default"
+                        disabled={Boolean(categoryDeletingId)}
+                        onClick={() => {
+                          setCategoryToDelete(null);
+                          setCategoryMessage("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        color="red"
+                        loading={categoryDeletingId === categoryToDelete?._id}
+                        onClick={handleCategoryDelete}
+                      >
+                        Delete category
+                      </Button>
+                    </Group>
+                  </Stack>
                 </Modal>
               </Stack>
             )}
