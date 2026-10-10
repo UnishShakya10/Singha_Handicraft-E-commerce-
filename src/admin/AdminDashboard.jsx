@@ -1,6 +1,6 @@
   import { useEffect, useState } from "react";
   import {
-    ActionIcon, Alert, Badge, Button, FileButton, Group, Image, Modal, Paper,
+    ActionIcon, Badge, Button, FileButton, Group, Image, Modal, Paper,
     Select, SimpleGrid, Stack, Table, Textarea, Text, TextInput, Title,
   } from "@mantine/core";
   import {
@@ -86,8 +86,6 @@
     const [ordersLoading, setOrdersLoading] = useState(true);
     const [updatingOrderId, setUpdatingOrderId] = useState("");
     const [invoiceOpened, setInvoiceOpened] = useState(false);
-    const [invoiceLoading, setInvoiceLoading] = useState(false);
-    const [invoiceMessage, setInvoiceMessage] = useState("");
     const [selectedInvoice, setSelectedInvoice] = useState(null);
 
     // ── State: Category form ──
@@ -206,32 +204,21 @@
       }
     };
 
-    const handleViewInvoice = async (orderId) => {
+    const handleViewInvoice = (order) => {
       setInvoiceOpened(true);
-      setInvoiceLoading(true);
-      setInvoiceMessage("");
-      setSelectedInvoice(null);
-
-      try {
-        const { data: order } = await api.get(`/orders/${orderId}`);
-        setSelectedInvoice({
-          number: order.invoiceNumber || `Order-${order._id.slice(-7)}`,
-          date: order.createdAt,
-          items: (order.items || []).map((item, index) => ({
-            id: item.product?._id || item.product || item._id || `line-${index}`,
-            title: item.name || item.title || "Product",
-            price: Number(item.price),
-            quantity: Number(item.quantity),
-          })),
-          subtotal: Number(order.subtotal ?? order.totalAmount ?? 0),
-          shippingAddress: order.shippingAddress || {},
-          paymentMethod: order.paymentMethod === "cod" ? "Cash on delivery" : order.paymentMethod,
-        });
-      } catch (error) {
-        setInvoiceMessage(errMsg(error, "Could not load this invoice."));
-      } finally {
-        setInvoiceLoading(false);
-      }
+      setSelectedInvoice({
+        number: order.invoiceNumber || `Order-${order._id.slice(-7)}`,
+        date: order.createdAt,
+        items: (order.items || []).map((item, index) => ({
+          id: item.product?._id || item.product || item._id || `line-${index}`,
+          title: item.name || item.title || "Product",
+          price: Number(item.price),
+          quantity: Number(item.quantity),
+        })),
+        subtotal: Number(order.subtotal ?? order.totalAmount ?? 0),
+        shippingAddress: order.shippingAddress || {},
+        paymentMethod: order.paymentMethod === "cod" ? "Cash on delivery" : order.paymentMethod,
+      });
     };
 
     const openNav = (key) => {
@@ -637,7 +624,7 @@
                                 variant="default"
                                 size="xs"
                                 leftSection={<Eye size={14} />}
-                                onClick={() => handleViewInvoice(order._id)}
+                                onClick={() => handleViewInvoice(order)}
                               >
                                 View invoice
                               </Button>
@@ -664,11 +651,7 @@
               title={<Title order={3}>Order invoice</Title>}
               classNames={{ body: "admin-invoice-modal-body" }}
             >
-              {invoiceLoading ? (
-                <Text size="sm" c="dimmed">Loading invoice...</Text>
-              ) : invoiceMessage ? (
-                <Alert color="red">{invoiceMessage}</Alert>
-              ) : selectedInvoice ? (
+              {selectedInvoice ? (
                 <Invoice
                   invoice={selectedInvoice}
                   onDone={() => setInvoiceOpened(false)}
