@@ -1,23 +1,21 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { ActionIcon, Alert, Button, Container, Group, Image, SimpleGrid, Stack, Text, TextInput, Textarea, Title } from "@mantine/core";
 import { Minus, Plus } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { api, formatPrice } from "../lib/api";
-import { useAuth } from "../context/AuthContext";
 import { useProducts } from "../context/ProductContext";
-import Invoice from "../component/Invoice";
 
 const CartPage = () => {
+  const navigate = useNavigate();
   const { items: cartItems, setQuantity, removeItem, clear } = useCart();
   const { products } = useProducts();
   const items = cartItems.filter((item) => (
     products.some((product) => product.id === item.id && product.isActive !== false)
   ));
   const subtotal = items.reduce((total, item) => total + Number(item.price) * item.quantity, 0);
-  const { user } = useAuth();
   const [shippingAddress, setShippingAddress] = useState({
-    fullName: user?.fullName || "",
+    fullName: "",
     phone: "",
     address: "",
     city: "",
@@ -25,9 +23,7 @@ const CartPage = () => {
     postalCode: "",
   });
   const [message, setMessage] = useState("");
-  const [orderPlaced, setOrderPlaced] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [invoice, setInvoice] = useState(null);
 
   const updateAddress = (field, value) => {
     setShippingAddress((current) => ({ ...current, [field]: value }));
@@ -44,37 +40,14 @@ const CartPage = () => {
         paymentMethod: "cod",
       });
       const order = data?.order || data;
-      const savedItems = order?.items;
-      const savedSubtotal = Number(order?.subtotal);
-      const savedShippingAddress = order?.shippingAddress;
-
-      if (
-        !order?.invoiceNumber ||
-        !order?.createdAt ||
-        !Array.isArray(savedItems) ||
-        !Number.isFinite(savedSubtotal) ||
-        !savedShippingAddress
-      ) {
+      if (!order?._id) {
         throw new Error(
-          "The order was placed, but the server did not return complete invoice details. Please contact us before placing another order."
+          "The order was placed, but the server did not return its ID. Please contact us before placing another order."
         );
       }
 
-      setInvoice({
-        number: order.invoiceNumber,
-        date: order.createdAt,
-        items: savedItems.map((item, index) => ({
-          id: item.product?._id || item.product || item._id || `line-${index}`,
-          title: item.name || item.title || "Product",
-          price: Number(item.price),
-          quantity: Number(item.quantity),
-        })),
-        subtotal: savedSubtotal,
-        shippingAddress: savedShippingAddress,
-        paymentMethod: "Cash on delivery",
-      });
       clear();
-      setOrderPlaced(true);
+      navigate(`/invoice/${encodeURIComponent(order._id)}`);
     } catch (error) {
       setMessage(
         error.response?.data?.message ||
@@ -86,30 +59,14 @@ const CartPage = () => {
     }
   };
 
-  if (invoice) {
-    return (
-      <Container size="md" py={64}>
-        <Alert color="teal" title="Order received" mb="lg" className="no-print">
-          Your request has been placed. Our team will contact you to confirm delivery.
-        </Alert>
-        <Invoice invoice={invoice} onDone={() => setInvoice(null)} />
-      </Container>
-    );
-  }
-
   return (
     <Container size="md" py={64}>
       <Stack gap="lg">
         <Title order={1}>Your cart</Title>
-        {orderPlaced && (
-          <Alert color="teal" title="Order received">
-            Your request has been placed. Our team will contact you to confirm delivery.
-          </Alert>
-        )}
         {message && <Alert color="red">{message}</Alert>}
         {items.length === 0 ? (
           <Stack align="flex-start" gap="md">
-            {!orderPlaced && <Text c="dimmed">Your cart is empty.</Text>}
+            <Text c="dimmed">Your cart is empty.</Text>
             <Button component={Link} to="/shop" color="dark">Browse collection</Button>
           </Stack>
         ) : (

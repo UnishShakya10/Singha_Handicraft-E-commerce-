@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import {
   Button,
   Badge,
   Container,
   Divider,
   Group,
-  Modal,
   Paper,
   SimpleGrid,
   Stack,
@@ -14,7 +14,6 @@ import {
 } from "@mantine/core";
 import { Eye } from "lucide-react";
 import { api, formatPrice } from "../lib/api";
-import Invoice from "../component/Invoice";
 
 const normalizeOrderStatus = (status) =>
   ({
@@ -39,24 +38,6 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-
-  const viewInvoice = (order) => {
-    setSelectedInvoice({
-      number: order.invoiceNumber || `Order-${order._id.slice(-7)}`,
-      date: order.createdAt,
-      items: (order.items || []).map((item, index) => ({
-        id: item.product?._id || item.product || item._id || `line-${index}`,
-        title: item.name || item.title || "Product",
-        price: Number(item.price),
-        quantity: Number(item.quantity),
-      })),
-      subtotal: Number(order.subtotal ?? order.totalAmount ?? 0),
-      shippingAddress: order.shippingAddress || {},
-      paymentMethod:
-        order.paymentMethod === "cod" ? "Cash on delivery" : order.paymentMethod,
-    });
-  };
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -146,10 +127,11 @@ const Orders = () => {
               {/* Footer */}
               <Group justify="flex-end">
                 <Button
+                  component={Link}
+                  to={`/invoice/${encodeURIComponent(order._id)}`}
                   variant="default"
                   color="dark"
                   leftSection={<Eye size={16} />}
-                  onClick={() => viewInvoice(order)}
                 >
                   View invoice
                 </Button>
@@ -159,21 +141,6 @@ const Orders = () => {
         ))}
       </Stack>
 
-      <Modal
-        opened={Boolean(selectedInvoice)}
-        onClose={() => setSelectedInvoice(null)}
-        centered
-        size="xl"
-        title={<Title order={3}>Order invoice</Title>}
-      >
-        {selectedInvoice && (
-          <Invoice
-            invoice={selectedInvoice}
-            onDone={() => setSelectedInvoice(null)}
-            doneLabel="Close"
-          />
-        )}
-      </Modal>
     </Container>
   );
 };
