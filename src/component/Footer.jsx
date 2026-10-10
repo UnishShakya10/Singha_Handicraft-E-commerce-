@@ -9,7 +9,14 @@ import {
   ThemeIcon,
   Title,
 } from "@mantine/core";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+
+
+const WHATSAPP_URL = "https://wa.me/9779860684495";
+const EMAIL = "shakyayubraj4@gmail.com";
+const MAP_URL =
+  "https://www.google.com/maps/search/?api=1&query=Singha+Handicraft+Lalitpur+Nepal";
 
 const Footer = () => {
   return (
@@ -38,22 +45,41 @@ const Footer = () => {
                 Visit
               </Text>
               <Group gap="xs" wrap="nowrap" align="flex-start">
-                <MapPin size={16} color="#c9a227" />
-                <Text size="sm" c="gray.4">
+                <MapPin size={16} color="#c9a227" style={{ flexShrink: 0, marginTop: 3 }} />
+                <Anchor
+                  href={MAP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  size="sm"
+                  c="gray.4"
+                  underline="hover"
+                >
                   Singha Handicraft, Lalitpur, Nepal
-                </Text>
+                </Anchor>
               </Group>
-              <Group gap="xs">
-                <Phone size={16} color="#c9a227" />
-                <Text size="sm" c="gray.4">
-                  +977 9861616232
-                </Text>
+              <Group gap="xs" wrap="nowrap">
+                <FaWhatsapp size={16} color="#c9a227" style={{ flexShrink: 0 }} />
+                <Anchor
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  size="sm"
+                  c="gray.4"
+                  underline="hover"
+                >
+                  +977 9860684495 
+                </Anchor>
               </Group>
-              <Group gap="xs">
-                <Mail size={16} color="#c9a227" />
-                <Text size="sm" c="gray.4">
-                  hello@singhahandicraft.com
-                </Text>
+              <Group gap="xs" wrap="nowrap">
+                <Mail size={16} color="#c9a227" style={{ flexShrink: 0 }} />
+                <Anchor
+                  href={`mailto:${EMAIL}`}
+                  size="sm"
+                  c="gray.4"
+                  underline="hover"
+                >
+                  {EMAIL}
+                </Anchor>
               </Group>
             </Stack>
           </Grid.Col>

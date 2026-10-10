@@ -6,6 +6,7 @@ import { useCart } from "../context/CartContext";
 import { api, formatPrice } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useProducts } from "../context/ProductContext";
+import Invoice from "../component/Invoice";
 
 const CartPage = () => {
   const { items: cartItems, setQuantity, removeItem, clear } = useCart();
@@ -26,6 +27,7 @@ const CartPage = () => {
   const [message, setMessage] = useState("");
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [invoice, setInvoice] = useState(null);
 
   const updateAddress = (field, value) => {
     setShippingAddress((current) => ({ ...current, [field]: value }));
@@ -36,19 +38,64 @@ const CartPage = () => {
     setMessage("");
     setSubmitting(true);
     try {
-      await api.post("/orders", {
+      const { data } = await api.post("/orders", {
         items: items.map((item) => ({ product: item.id, quantity: item.quantity })),
         shippingAddress,
         paymentMethod: "cod",
       });
+      const order = data?.order || data;
+      const savedItems = order?.items;
+      const savedSubtotal = Number(order?.subtotal);
+      const savedShippingAddress = order?.shippingAddress;
+
+      if (
+        !order?.invoiceNumber ||
+        !order?.createdAt ||
+        !Array.isArray(savedItems) ||
+        !Number.isFinite(savedSubtotal) ||
+        !savedShippingAddress
+      ) {
+        throw new Error(
+          "The order was placed, but the server did not return complete invoice details. Please contact us before placing another order."
+        );
+      }
+
+      setInvoice({
+        number: order.invoiceNumber,
+        date: order.createdAt,
+        items: savedItems.map((item, index) => ({
+          id: item.product?._id || item.product || item._id || `line-${index}`,
+          title: item.name || item.title || "Product",
+          price: Number(item.price),
+          quantity: Number(item.quantity),
+        })),
+        subtotal: savedSubtotal,
+        shippingAddress: savedShippingAddress,
+        paymentMethod: "Cash on delivery",
+      });
       clear();
       setOrderPlaced(true);
     } catch (error) {
-      setMessage(error.response?.data?.message || "Your order could not be placed. Please try again.");
+      setMessage(
+        error.response?.data?.message ||
+          error.message ||
+          "Your order could not be placed. Please try again."
+      );
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (invoice) {
+    return (
+      <Container size="md" py={64}>
+        <Alert color="teal" title="Order received" mb="lg" className="no-print">
+          Your request has been placed. Our team will contact you to confirm delivery.
+        </Alert>
+        <Invoice invoice={invoice} onDone={() => setInvoice(null)} />
+      </Container>
+    );
+  }
 
   return (
     <Container size="md" py={64}>
@@ -125,7 +172,7 @@ const CartPage = () => {
                 <SimpleGrid cols={{ base: 1, sm: 3 }}>
                   <TextInput label="City" autoComplete="address-level2" required value={shippingAddress.city} onChange={(event) => updateAddress("city", event.currentTarget.value)} />
                   <TextInput label="State / Province" autoComplete="address-level1" required value={shippingAddress.state} onChange={(event) => updateAddress("state", event.currentTarget.value)} />
-                  <TextInput label="Postal code" autoComplete="postal-code" required value={shippingAddress.postalCode} onChange={(event) => updateAddress("postalCode", event.currentTarget.value)} />
+                  <TextInput label="Postal code (optional)" autoComplete="postal-code" value={shippingAddress.postalCode} onChange={(event) => updateAddress("postalCode", event.currentTarget.value)} />
                 </SimpleGrid>
                 <Button type="submit" color="dark" loading={submitting}>
                   Place order · {formatPrice(subtotal)}

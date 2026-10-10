@@ -1,16 +1,17 @@
   import { useEffect, useState } from "react";
   import {
-    ActionIcon, Badge, Button, FileButton, Group, Image, Modal, Paper,
+    ActionIcon, Alert, Badge, Button, FileButton, Group, Image, Modal, Paper,
     Select, SimpleGrid, Stack, Table, Textarea, Text, TextInput, Title,
   } from "@mantine/core";
   import {
-    ArrowUpRight, Boxes, ChevronLeft, ChevronRight, ClipboardList, LayoutDashboard, LogOut,
+    ArrowUpRight, Boxes, ChevronLeft, ChevronRight, ClipboardList, Eye, LayoutDashboard, LogOut,
     Images, Package, Plus, RefreshCw, Shapes, Trash2, UsersRound,
   } from "lucide-react";
   import { api, fileUrl, formatPrice } from "../lib/api";
   import { useAuth } from "../context/AuthContext";
   import { useProducts } from "../context/ProductContext";
   import Shop from "../pages/Shop";
+  import Invoice from "../component/Invoice";
 
   /* ───────────────────────────── SCHEMAS ─────────────────────────────
   * @typedef {Object} Product   (from useProducts)
@@ -26,11 +27,12 @@
   * @property {string} description   max 300 chars
   * @property {string} [image]       uploaded image URL
   *
-  * @typedef {Object} Order     (GET /orders/admin, PATCH /orders/:id/status)
+  * @typedef {Object} Order     (GET /orders, PATCH /orders/:id)
   * @property {string} _id
+  * @property {string} invoiceNumber
   * @property {Customer} [user]      populated user
   * @property {string} createdAt     ISO date
-  * @property {"placed"|"processing"|"shipped"|"delivered"|"cancelled"} status
+  * @property {"pending"|"confirmed"|"delivered"|"cancelled"} status
   * @property {number} totalAmount
   *
   * @typedef {Object} Customer  (GET /users/getAll)
@@ -55,9 +57,14 @@
   const sectionTitles = Object.fromEntries(navigation.map((n) => [n.key, n.label]));
 
   /** Order.status enum */
-  const orderStatuses = ["placed", "processing", "shipped", "delivered", "cancelled"];
-  const statusColors = { placed: "gray", processing: "orange", shipped: "blue", delivered: "green", cancelled: "red" };
-  const getOrderStatusColor = (s) => statusColors[s] || "gray";
+  const orderStatuses = ["pending", "confirmed", "delivered", "cancelled"];
+  const statusColors = { pending: "yellow", confirmed: "blue", delivered: "green", cancelled: "red" };
+  const normalizeOrderStatus = (status) => ({
+    placed: "pending",
+    processing: "confirmed",
+    shipped: "confirmed",
+  })[status] || status || "pending";
+  const getOrderStatusColor = (status) => statusColors[normalizeOrderStatus(status)] || "gray";
 
   const CATEGORY_ADDED = "Category added.";
   const CATEGORY_DELETED = "Category deleted.";
@@ -69,6 +76,7 @@
     // ── State: navigation ──
     const [section, setSection] = useState("overview");
     const [refreshVersion, setRefreshVersion] = useState(0);
+    const [sevenDaysAgo] = useState(() => new Date(Date.now() - 7 * 864e5));
 
     // ── State: Order[] / Customer[] ──
     const [orders, setOrders] = useState([]);
@@ -77,6 +85,10 @@
     const [customersMessage, setCustomersMessage] = useState("");
     const [ordersLoading, setOrdersLoading] = useState(true);
     const [updatingOrderId, setUpdatingOrderId] = useState("");
+    const [invoiceOpened, setInvoiceOpened] = useState(false);
+    const [invoiceLoading, setInvoiceLoading] = useState(false);
+    const [invoiceMessage, setInvoiceMessage] = useState("");
+    const [selectedInvoice, setSelectedInvoice] = useState(null);
 
     // ── State: Category form ──
     const [categoryName, setCategoryName] = useState("");
@@ -102,7 +114,7 @@
     useEffect(() => {
       let active = true;
       (async () => {
-        const [o, c] = await Promise.allSettled([api.get("/orders/admin"), api.get("/users/getAll")]);
+        const [o, c] = await Promise.allSettled([api.get("/orders"), api.get("/users/getAll")]);
         if (!active) return;
         if (o.status === "fulfilled") { setOrders(o.value.data); setOrdersMessage(""); }
         else setOrdersMessage(errMsg(o.reason, "Could not load orders."));
@@ -117,7 +129,6 @@
     const stockCount = sumBy(products, (p) => Number(p.stock || 0));
     const inventoryValue = sumBy(products, (p) => Number(p.price || 0) * Number(p.stock || 0));
     const orderTotal = sumBy(orders, (o) => Number(o.totalAmount || 0));
-    const sevenDaysAgo = new Date(Date.now() - 7 * 864e5);
     const recentOrderCount = orders.filter((o) => new Date(o.createdAt) >= sevenDaysAgo).length;
 
     // Product -> Category link: by categoryId, else by name
@@ -186,12 +197,40 @@
       setUpdatingOrderId(orderId);
       setOrdersMessage("");
       try {
-        const { data } = await api.patch(`/orders/${orderId}/status`, { status });
+        const { data } = await api.patch(`/orders/${orderId}`, { status });
         setOrders((cur) => cur.map((o) => (o._id === orderId ? data : o)));
       } catch (error) {
         setOrdersMessage(errMsg(error, "Could not update order status."));
       } finally {
         setUpdatingOrderId("");
+      }
+    };
+
+    const handleViewInvoice = async (orderId) => {
+      setInvoiceOpened(true);
+      setInvoiceLoading(true);
+      setInvoiceMessage("");
+      setSelectedInvoice(null);
+
+      try {
+        const { data: order } = await api.get(`/orders/${orderId}`);
+        setSelectedInvoice({
+          number: order.invoiceNumber || `Order-${order._id.slice(-7)}`,
+          date: order.createdAt,
+          items: (order.items || []).map((item, index) => ({
+            id: item.product?._id || item.product || item._id || `line-${index}`,
+            title: item.name || item.title || "Product",
+            price: Number(item.price),
+            quantity: Number(item.quantity),
+          })),
+          subtotal: Number(order.subtotal ?? order.totalAmount ?? 0),
+          shippingAddress: order.shippingAddress || {},
+          paymentMethod: order.paymentMethod === "cod" ? "Cash on delivery" : order.paymentMethod,
+        });
+      } catch (error) {
+        setInvoiceMessage(errMsg(error, "Could not load this invoice."));
+      } finally {
+        setInvoiceLoading(false);
       }
     };
 
@@ -554,45 +593,60 @@
                 {ordersLoading && orders.length === 0 ? (
                   <Text size="sm" c="dimmed">Loading orders...</Text>
                 ) : (
-                  <Table.ScrollContainer minWidth={760}>
-                    <Table highlightOnHover verticalSpacing="sm">
+                  <Table.ScrollContainer minWidth={980}>
+                    <Table highlightOnHover verticalSpacing="sm" className="admin-table">
                       <Table.Thead>
                         <Table.Tr>
-                          <Table.Th>Order</Table.Th>
-                          <Table.Th>Customer</Table.Th>
+                          <Table.Th>Invoice no.</Table.Th>
                           <Table.Th>Date</Table.Th>
-                          <Table.Th>Status</Table.Th>
+                          <Table.Th>Customer</Table.Th>
+                          <Table.Th>Phone</Table.Th>
                           <Table.Th ta="right">Total</Table.Th>
+                          <Table.Th>Status</Table.Th>
+                          <Table.Th />
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
                         {orders.map((order) => (
                           <Table.Tr key={order._id}>
-                            <Table.Td><Text size="sm" fw={600}>#{order._id.slice(-7)}</Text></Table.Td>
-                            <Table.Td>
-                              <Text size="sm">{order.user?.fullName || "Unknown customer"}</Text>
-                              <Text size="xs" c="dimmed">{order.user?.email || ""}</Text>
-                            </Table.Td>
+                            <Table.Td><Text size="sm" fw={600}>{order.invoiceNumber || `Order-${order._id.slice(-7)}`}</Text></Table.Td>
                             <Table.Td><Text size="sm">{new Date(order.createdAt).toLocaleDateString()}</Text></Table.Td>
                             <Table.Td>
+                              <Text size="sm">{order.shippingAddress?.fullName || order.user?.fullName || "Unknown customer"}</Text>
+                            </Table.Td>
+                            <Table.Td><Text size="sm">{order.shippingAddress?.phone || "—"}</Text></Table.Td>
+                            <Table.Td ta="right"><Text size="sm" fw={600}>{formatPrice(order.subtotal ?? order.totalAmount)}</Text></Table.Td>
+                            <Table.Td>
                               <Group gap="xs" wrap="nowrap">
-                                <Badge color={getOrderStatusColor(order.status)} variant="light" tt="capitalize">{order.status}</Badge>
+                                <Badge color={getOrderStatusColor(order.status)} variant="light" tt="capitalize">{normalizeOrderStatus(order.status)}</Badge>
                                 <Select
-                                  aria-label={`Change order ${order._id.slice(-7)} status`}
-                                  size="xs" w={110} placeholder="Change"
-                                  data={orderStatuses.map((s) => ({ value: s, label: s }))}
-                                  value={null}
+                                  aria-label={`Change order ${order.invoiceNumber || order._id.slice(-7)} status`}
+                                  size="xs" w={130}
+                                  data={orderStatuses.map((status) => ({
+                                    value: status,
+                                    label: status.charAt(0).toUpperCase() + status.slice(1),
+                                  }))}
+                                  value={normalizeOrderStatus(order.status)}
                                   disabled={updatingOrderId === order._id}
-                                  onChange={(s) => s && s !== order.status && handleOrderStatusChange(order._id, s)}
+                                  onChange={(status) => status && status !== normalizeOrderStatus(order.status) && handleOrderStatusChange(order._id, status)}
                                 />
                               </Group>
                             </Table.Td>
-                            <Table.Td ta="right"><Text size="sm" fw={600}>{formatPrice(order.totalAmount)}</Text></Table.Td>
+                            <Table.Td>
+                              <Button
+                                variant="default"
+                                size="xs"
+                                leftSection={<Eye size={14} />}
+                                onClick={() => handleViewInvoice(order._id)}
+                              >
+                                View invoice
+                              </Button>
+                            </Table.Td>
                           </Table.Tr>
                         ))}
                         {orders.length === 0 && !ordersMessage && (
                           <Table.Tr>
-                            <Table.Td colSpan={5}><Text ta="center" c="dimmed" py="xl">No orders found.</Text></Table.Td>
+                            <Table.Td colSpan={7}><Text ta="center" c="dimmed" py="xl">No orders found.</Text></Table.Td>
                           </Table.Tr>
                         )}
                       </Table.Tbody>
@@ -601,6 +655,27 @@
                 )}
               </section>
             )}
+
+            <Modal
+              opened={invoiceOpened}
+              onClose={() => setInvoiceOpened(false)}
+              centered
+              size="xl"
+              title={<Title order={3}>Order invoice</Title>}
+              classNames={{ body: "admin-invoice-modal-body" }}
+            >
+              {invoiceLoading ? (
+                <Text size="sm" c="dimmed">Loading invoice...</Text>
+              ) : invoiceMessage ? (
+                <Alert color="red">{invoiceMessage}</Alert>
+              ) : selectedInvoice ? (
+                <Invoice
+                  invoice={selectedInvoice}
+                  onDone={() => setInvoiceOpened(false)}
+                  doneLabel="Close"
+                />
+              ) : null}
+            </Modal>
 
             {/* ── Customers (Customer[]) ── */}
             {section === "customers" && (

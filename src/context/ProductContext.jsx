@@ -6,7 +6,26 @@ import { useAuth } from "./AuthContext";
 
 const ProductContext = createContext(null);
 
-const mapProduct = (product) => {
+const normalizeCategory = (value) =>
+  String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+const mapProduct = (product, categories = []) => {
+  const categoryValue = product.category;
+  const categoryById = categories.find(
+    (category) => String(category._id) === String(categoryValue?._id || categoryValue || product.categoryId)
+  );
+  const categoryByName = categories.find(
+    (category) => normalizeCategory(category.name) === normalizeCategory(categoryValue)
+  );
+  const categoryId =
+    categoryValue?._id ||
+    categoryById?._id ||
+    categoryByName?._id ||
+    product.categoryId ||
+    "";
+  const resolvedCategory = categories.find(
+    (category) => String(category._id) === String(categoryId)
+  );
   const images = (product.images?.length
     ? product.images
     : product.image
@@ -22,8 +41,14 @@ const mapProduct = (product) => {
     title: product.name || product.title,
     image: images[0] || "",
     images,
-    categoryId: product.category?._id || product.categoryId || "",
-    category: product.category?.name || product.category,
+    categoryId,
+    category:
+      categoryValue?.name ||
+      resolvedCategory?.name ||
+      categoryByName?.name ||
+      (typeof categoryValue === "string" && !/^[a-f\d]{24}$/i.test(categoryValue)
+        ? categoryValue
+        : ""),
     material: product.material || "Handcrafted",
     collection: product.collection || "new",
     isActive: product.isActive !== false,
@@ -34,30 +59,41 @@ export const ProductProvider = ({ children }) => {
   const { role } = useAuth();
   const [products, setProducts] = useState(initialProducts);
   const [categories, setCategories] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState("");
 
   useEffect(() => {
     const loadProducts = async () => {
+      setProductsLoading(true);
+      setProductsError("");
+      if (role === "admin") setProducts([]);
+
       try {
         const [{ data: productData }, { data: categoryData }] = await Promise.all([
           api.get(role === "admin" ? "/products/admin" : "/products"),
           api.get("/category"),
         ]);
-        setProducts(productData.map(mapProduct));
+        setProducts(productData.map((product) => mapProduct(product, categoryData)));
         setCategories(categoryData);
-      } catch {
-        // Keep the bundled catalog available when the API is offline.
+      } catch (error) {
+        if (role === "admin") setProducts([]);
+        setProductsError(
+          error.response?.data?.message || "Could not load products. Please try again."
+        );
+      } finally {
+        setProductsLoading(false);
       }
     };
 
     loadProducts();
   }, [role]);
 
-  const addProduct = async (product) => {
+  const addProduct = useCallback(async (product) => {
     const { data } = await api.post("/products", product);
-    const nextProduct = mapProduct(data);
+    const nextProduct = mapProduct(data, categories);
     setProducts((currentProducts) => [nextProduct, ...currentProducts]);
     return nextProduct;
-  };
+  }, [categories]);
 
   const updateProduct = useCallback(async (id, product) => {
     const existingProduct = products.find((currentProduct) => currentProduct.id === id);
@@ -85,13 +121,13 @@ export const ProductProvider = ({ children }) => {
       ...payload,
       ...(data || {}),
       _id: data?._id || id,
-      category: data?.category ?? existingProduct?.category ?? payload.category,
-    });
+      category: data?.category ?? payload.category ?? existingProduct?.category,
+    }, categories);
     setProducts((currentProducts) => currentProducts.map((currentProduct) => (
       currentProduct.id === id ? nextProduct : currentProduct
     )));
     return nextProduct;
-  }, [products]);
+  }, [products, categories]);
 
   const addCategory = async (category) => {
     const { data } = await api.post("/category/create", category);
@@ -117,8 +153,19 @@ export const ProductProvider = ({ children }) => {
   };
 
   const value = useMemo(
-    () => ({ products, categories, addProduct, updateProduct, addCategory, removeCategory, removeProduct, uploadImage }),
-    [products, categories, updateProduct]
+    () => ({
+      products,
+      categories,
+      productsLoading,
+      productsError,
+      addProduct,
+      updateProduct,
+      addCategory,
+      removeCategory,
+      removeProduct,
+      uploadImage,
+    }),
+    [products, categories, productsLoading, productsError, addProduct, updateProduct]
   );
 
   return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;

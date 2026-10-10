@@ -1,16 +1,14 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { ActionIcon, Alert, Button, Container, FileButton, Group, Image, Modal, Select, SimpleGrid, Stack, Switch, Table, Text, Textarea, TextInput, Title } from "@mantine/core";
 import { ChevronLeft, ChevronRight, Images, Pencil, Plus, Trash2 } from "lucide-react";
 import Cards from "../component/Cards";
-import { featuredCollections } from "../data/products";
 import { useProducts } from "../context/ProductContext";
 import { formatPrice } from "../lib/api";
 
 const emptyForm = {
   title: "",
   category: "",
-  collection: "new",
   price: "",
   stock: "1",
   material: "",
@@ -19,7 +17,6 @@ const emptyForm = {
   image: "/Manjushree.webp",
   imageFile: null,
   extraImageFiles: [],
-  // new fields
   description: "",
   iconography: "",
   significance: "",
@@ -44,9 +41,19 @@ const normalizeCategory = (value = "") =>
 const ADMIN_PAGE_SIZE = 10;
 
 const Shop = ({ adminMode = false }) => {
-  const { products, categories, addProduct, updateProduct, removeProduct, uploadImage } = useProducts();
-  const [searchParams] = useSearchParams();
+  const {
+    products,
+    categories,
+    productsLoading,
+    productsError,
+    addProduct,
+    updateProduct,
+    removeProduct,
+    uploadImage,
+  } = useProducts();
+  const [searchParams, setSearchParams] = useSearchParams();
   const selectedCategory = searchParams.get("category")?.trim() || "";
+  const selectCategory = (name) => setSearchParams(name ? { category: name } : {});
   const selectedCategoryData = categories.find(
     (category) => normalizeCategory(category.name) === normalizeCategory(selectedCategory)
   );
@@ -114,7 +121,8 @@ const Shop = ({ adminMode = false }) => {
           ? [image, ...uploadedExtraImages]
           : uploadedExtraImages,
         category: form.category,
-        collection: form.collection,
+        // collections are no longer used in the UI; kept so the API still gets a value
+        collection: editingProduct?.collection || "new",
         material: form.material,
         description:
           form.description.trim() ||
@@ -137,6 +145,7 @@ const Shop = ({ adminMode = false }) => {
 
       setForm(emptyForm);
       setEditingProduct(null);
+      setProductPage(0);
       setOpened(false);
     } catch (error) {
       setProductMessage(error.response?.data?.message || "Could not save this product.");
@@ -159,18 +168,15 @@ const Shop = ({ adminMode = false }) => {
       ...emptyForm,
       title: product.title || product.name || "",
       category: categoryId || "",
-      collection: product.collection || "new",
       price: String(product.price ?? ""),
       stock: String(product.stock ?? 0),
       material: product.material || "",
       dimensionsCm,
       dimensionsInches,
       image: product.image || product.images?.[0] || "",
-      // new fields
       description: product.description || "",
       iconography: product.iconography || "",
       significance: product.significance || "",
-
     });
     setOpened(true);
   };
@@ -216,7 +222,7 @@ const Shop = ({ adminMode = false }) => {
   };
 
   return (
-    <div className={showManagement ? "admin-product-panel" : "min-h-screen bg-paper py-16"}>
+    <div className={showManagement ? "admin-product-panel" : "min-h-screen bg-paper"}>
       {showManagement ? (
         <Container size="xl" py="md">
           <Group justify="space-between" align="center" mb="md">
@@ -241,13 +247,17 @@ const Shop = ({ adminMode = false }) => {
                 {productMessage}
               </Alert>
             )}
-            <Table.ScrollContainer minWidth={760}>
+            {productsError && (
+              <Alert color="red" m="md">
+                {productsError}
+              </Alert>
+            )}
+            <Table.ScrollContainer minWidth={680}>
               <Table verticalSpacing="sm" highlightOnHover className="admin-table">
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>Product</Table.Th>
                     <Table.Th>Category</Table.Th>
-                    <Table.Th>Collection</Table.Th>
                     <Table.Th>Stock</Table.Th>
                     <Table.Th ta="right">Price</Table.Th>
                     <Table.Th>Website</Table.Th>
@@ -267,7 +277,6 @@ const Shop = ({ adminMode = false }) => {
                         </Group>
                       </Table.Td>
                       <Table.Td><Text size="sm">{product.category || "Uncategorized"}</Text></Table.Td>
-                      <Table.Td><Text size="sm" tt="capitalize">{product.collection || "new"}</Text></Table.Td>
                       <Table.Td>
                         <Text size="sm" c={Number(product.stock || 0) > 0 ? "dark" : "red"}>
                           {Number(product.stock || 0)}
@@ -310,78 +319,135 @@ const Shop = ({ adminMode = false }) => {
                       </Table.Td>
                     </Table.Tr>
                   ))}
-                  {products.length === 0 && (
+                  {productsLoading && (
                     <Table.Tr>
-                      <Table.Td colSpan={7}><Text ta="center" c="dimmed" py="xl">No products found.</Text></Table.Td>
+                      <Table.Td colSpan={6}><Text ta="center" c="dimmed" py="xl">Loading products...</Text></Table.Td>
+                    </Table.Tr>
+                  )}
+                  {!productsLoading && !productsError && products.length === 0 && (
+                    <Table.Tr>
+                      <Table.Td colSpan={6}><Text ta="center" c="dimmed" py="xl">No products found.</Text></Table.Td>
                     </Table.Tr>
                   )}
                 </Table.Tbody>
-                </Table>
+              </Table>
             </Table.ScrollContainer>
-            {products.length > ADMIN_PAGE_SIZE && (
-                <Group justify="space-between" px="md" py="sm" className="admin-inventory-pagination">
-                  <Text size="xs" c="dimmed">
-                    Showing {currentProductPage * ADMIN_PAGE_SIZE + 1}–
-                    {Math.min((currentProductPage + 1) * ADMIN_PAGE_SIZE, products.length)}
-                    {" "}of {products.length} products
-                  </Text>
-                  <Group gap="xs">
-                    <Button
-                      variant="default"
-                      size="xs"
-                      leftSection={<ChevronLeft size={14} />}
-                      disabled={currentProductPage === 0}
-                      onClick={() => setProductPage(Math.max(0, currentProductPage - 1))}
-                    >
-                      Previous
-                    </Button>
-                    <Text size="xs" c="dimmed">{currentProductPage + 1} / {productPageCount}</Text>
-                    <Button
-                      variant="default"
-                      size="xs"
-                      rightSection={<ChevronRight size={14} />}
-                      disabled={currentProductPage >= productPageCount - 1}
-                      onClick={() => setProductPage(Math.min(productPageCount - 1, currentProductPage + 1))}
-                    >
-                      Next
-                    </Button>
-                  </Group>
+            {!productsLoading && products.length > ADMIN_PAGE_SIZE && (
+              <Group justify="space-between" px="md" py="sm" className="admin-inventory-pagination">
+                <Text size="xs" c="dimmed">
+                  Showing {currentProductPage * ADMIN_PAGE_SIZE + 1}–
+                  {Math.min((currentProductPage + 1) * ADMIN_PAGE_SIZE, products.length)}
+                  {" "}of {products.length} products
+                </Text>
+                <Group gap="xs">
+                  <Button
+                    variant="default"
+                    size="xs"
+                    leftSection={<ChevronLeft size={14} />}
+                    disabled={currentProductPage === 0}
+                    onClick={() => setProductPage(Math.max(0, currentProductPage - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Text size="xs" c="dimmed">{currentProductPage + 1} / {productPageCount}</Text>
+                  <Button
+                    variant="default"
+                    size="xs"
+                    rightSection={<ChevronRight size={14} />}
+                    disabled={currentProductPage >= productPageCount - 1}
+                    onClick={() => setProductPage(Math.min(productPageCount - 1, currentProductPage + 1))}
+                  >
+                    Next
+                  </Button>
                 </Group>
+              </Group>
             )}
           </section>
         </Container>
       ) : (
         <>
-          <Container size="xl" mb={64}>
-            <Group justify="space-between" align="flex-end" mb="xl">
-              <Stack gap={6}>
-                <Text size="xs" fw={600} tt="uppercase" lts={4} c="gold.6">The collection</Text>
-                <Title order={1} mt="sm" c="dark">{selectedCategory || "Sacred sculpture"}</Title>
-              </Stack>
-            </Group>
-            <Text c="dimmed" maw={560} mt="md">
-              {selectedCategoryData?.description?.trim() ||
-                "Hand-finished Buddhist statues in copper and bronze. Prices are in Nepalese rupees; international shipping is arranged on request."}
-            </Text>
-          </Container>
-
-          {featuredCollections.map((section) => {
-            const sectionProducts = visibleProducts.filter((product) => product.collection === section.id);
-            if (selectedCategory && sectionProducts.length === 0) return null;
-            return (
-              <ProductSection
-                key={section.id}
-                title={section.title}
-                description={section.description}
-                products={sectionProducts}
-              />
-            );
-          })}
-          {selectedCategory && visibleProducts.length === 0 && (
-            <Container size="xl" py="xl">
-              <Text c="dimmed">No products found in this category.</Text>
+          {/* Hero */}
+          <section className="bg-stone-900">
+            <Container size="xl" py={72}>
+              <Text size="xs" fw={600} tt="uppercase" lts={4} c="yellow.5">
+                The collection
+              </Text>
+              <Title
+                order={1}
+                mt="sm"
+                c="white"
+                fz={{ base: 34, md: 56 }}
+                lh={1.1}
+                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+              >
+                {selectedCategory || "Sacred sculpture"}
+              </Title>
+              <Text c="gray.4" maw={560} mt="md">
+                {selectedCategoryData?.description?.trim() ||
+                  "Hand-finished Buddhist statues in copper and bronze. Prices are in Nepalese rupees; international shipping is arranged on request."}
+              </Text>
+              <Text size="sm" c="gray.5" mt="lg">
+                {visibleProducts.length} {visibleProducts.length === 1 ? "piece" : "pieces"}
+              </Text>
             </Container>
-          )}
+          </section>
+
+          {/* Sticky category filter bar (change top-0 if your navbar is sticky) */}
+          <div className="sticky top-0 z-10 border-b border-stone-200 bg-paper/90 backdrop-blur">
+            <Container size="xl" py="sm">
+              <div className="no-scrollbar flex gap-2 overflow-x-auto">
+                <Button
+                  size="xs"
+                  radius="xl"
+                  color="dark"
+                  variant={selectedCategory ? "default" : "filled"}
+                  onClick={() => selectCategory("")}
+                  style={{ flexShrink: 0 }}
+                >
+                  All
+                </Button>
+                {categories.map((category) => {
+                  const active =
+                    normalizeCategory(category.name) === normalizeCategory(selectedCategory);
+                  return (
+                    <Button
+                      key={category._id}
+                      size="xs"
+                      radius="xl"
+                      color="dark"
+                      variant={active ? "filled" : "default"}
+                      onClick={() => selectCategory(category.name)}
+                      style={{ flexShrink: 0 }}
+                    >
+                      {category.name}
+                    </Button>
+                  );
+                })}
+              </div>
+            </Container>
+          </div>
+
+          {/* All products in one class */}
+          <Container size="xl" py={64}>
+            {visibleProducts.length > 0 ? (
+              <ProductSection
+                title={selectedCategory || "All pieces"}
+                products={visibleProducts}
+              />
+            ) : (
+              <Stack align="center" gap="xs" py={80}>
+                <Title order={3}>Nothing here yet</Title>
+                <Text c="dimmed">
+                  {selectedCategory ? "No products found in this category." : "No products available right now."}
+                </Text>
+                {selectedCategory && (
+                  <Button variant="default" radius="xl" onClick={() => selectCategory("")}>
+                    View all pieces
+                  </Button>
+                )}
+              </Stack>
+            )}
+          </Container>
         </>
       )}
 
@@ -410,94 +476,92 @@ const Shop = ({ adminMode = false }) => {
               {productMessage && !productToDelete && (
                 <Alert color="red" className="product-editor-message">{productMessage}</Alert>
               )}
-            <div className="product-editor-fields">
-              <section className="product-editor-section">
-                <div>
-                  <Text fw={700}>Product details</Text>
-                  <Text size="xs" c="dimmed">Name, material, price, and measurements.</Text>
-                </div>
-                <TextInput
-                  label="Product name"
-                  placeholder="Name this piece"
-                  required
-                  value={form.title}
-                  onChange={(event) => updateField("title", event.currentTarget.value)}
-                />
-                <SimpleGrid cols={{ base: 1, sm: 3 }}>
-                  <TextInput label="Price (NPR)" type="number" min={1} required value={form.price} onChange={(event) => updateField("price", event.currentTarget.value)} />
-                  <TextInput label="Stock quantity" type="number" min={0} step={1} required value={form.stock} onChange={(event) => updateField("stock", event.currentTarget.value)} />
-                  <TextInput label="Material" placeholder="Copper, bronze..." required value={form.material} onChange={(event) => updateField("material", event.currentTarget.value)} />
-                </SimpleGrid>
-                <Group grow align="flex-start">
+              <div className="product-editor-fields">
+                <section className="product-editor-section">
+                  <div>
+                    <Text fw={700}>Product details</Text>
+                    <Text size="xs" c="dimmed">Name, material, price, and measurements.</Text>
+                  </div>
                   <TextInput
-                    label="Dimensions (cm)"
-                    placeholder="25 x 20"
+                    label="Product name"
+                    placeholder="Name this piece"
                     required
-                    value={form.dimensionsCm}
-                    onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      setForm((current) => ({
-                        ...current,
-                        dimensionsCm: value,
-                        dimensionsInches: convertDimensions(value, "cm", "in"),
-                      }));
-                    }}
+                    value={form.title}
+                    onChange={(event) => updateField("title", event.currentTarget.value)}
                   />
-                  <TextInput
-                    label="Dimensions (in)"
-                    placeholder="9.8 x 7.9"
-                    required
-                    value={form.dimensionsInches}
-                    onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      setForm((current) => ({
-                        ...current,
-                        dimensionsInches: value,
-                        dimensionsCm: convertDimensions(value, "in", "cm"),
-                      }));
-                    }}
+                  <SimpleGrid cols={{ base: 1, sm: 3 }}>
+                    <TextInput label="Price (NPR)" type="number" min={1} required value={form.price} onChange={(event) => updateField("price", event.currentTarget.value)} />
+                    <TextInput label="Stock quantity" type="number" min={0} step={1} required value={form.stock} onChange={(event) => updateField("stock", event.currentTarget.value)} />
+                    <TextInput label="Material" placeholder="Copper, bronze..." required value={form.material} onChange={(event) => updateField("material", event.currentTarget.value)} />
+                  </SimpleGrid>
+                  <Group grow align="flex-start">
+                    <TextInput
+                      label="Dimensions (cm)"
+                      placeholder="25 x 20"
+                      required
+                      value={form.dimensionsCm}
+                      onChange={(event) => {
+                        const value = event.currentTarget.value;
+                        setForm((current) => ({
+                          ...current,
+                          dimensionsCm: value,
+                          dimensionsInches: convertDimensions(value, "cm", "in"),
+                        }));
+                      }}
+                    />
+                    <TextInput
+                      label="Dimensions (in)"
+                      placeholder="9.8 x 7.9"
+                      required
+                      value={form.dimensionsInches}
+                      onChange={(event) => {
+                        const value = event.currentTarget.value;
+                        setForm((current) => ({
+                          ...current,
+                          dimensionsInches: value,
+                          dimensionsCm: convertDimensions(value, "in", "cm"),
+                        }));
+                      }}
+                    />
+                  </Group>
+                </section>
+
+                <section className="product-editor-section">
+                  <div>
+                    <Text fw={700}>Product story</Text>
+                    <Text size="xs" c="dimmed">Shown in the tabs on the product page. Write in your own words.</Text>
+                  </div>
+                  <Textarea
+                    label="Description"
+                    placeholder="Size, materials, how it is made..."
+                    minRows={4}
+                    autosize
+                    value={form.description}
+                    onChange={(event) => updateField("description", event.currentTarget.value)}
                   />
-                </Group>
-              </section>
+                  <Textarea
+                    label="Iconography"
+                    placeholder="Posture, hand gestures, what the details mean..."
+                    minRows={3}
+                    autosize
+                    value={form.iconography}
+                    onChange={(event) => updateField("iconography", event.currentTarget.value)}
+                  />
+                  <Textarea
+                    label="Spiritual significance"
+                    placeholder="What this deity represents..."
+                    minRows={3}
+                    autosize
+                    value={form.significance}
+                    onChange={(event) => updateField("significance", event.currentTarget.value)}
+                  />
+                </section>
 
-              {/* NEW: product story */}
-              <section className="product-editor-section">
-                <div>
-                  <Text fw={700}>Product story</Text>
-                  <Text size="xs" c="dimmed">Shown in the tabs on the product page. Write in your own words.</Text>
-                </div>
-                <Textarea
-                  label="Description"
-                  placeholder="Size, materials, how it is made..."
-                  minRows={4}
-                  autosize
-                  value={form.description}
-                  onChange={(event) => updateField("description", event.currentTarget.value)}
-                />
-                <Textarea
-                  label="Iconography"
-                  placeholder="Posture, hand gestures, what the details mean..."
-                  minRows={3}
-                  autosize
-                  value={form.iconography}
-                  onChange={(event) => updateField("iconography", event.currentTarget.value)}
-                />
-                <Textarea
-                  label="Spiritual significance"
-                  placeholder="What this deity represents..."
-                  minRows={3}
-                  autosize
-                  value={form.significance}
-                  onChange={(event) => updateField("significance", event.currentTarget.value)}
-                />
-              </section>
-
-              <section className="product-editor-section">
-                <div>
-                  <Text fw={700}>Organization</Text>
-                  <Text size="xs" c="dimmed">Choose where customers will find this item.</Text>
-                </div>
-                <Group grow align="flex-start">
+                <section className="product-editor-section">
+                  <div>
+                    <Text fw={700}>Organization</Text>
+                    <Text size="xs" c="dimmed">Choose where customers will find this item.</Text>
+                  </div>
                   <Select
                     label="Category"
                     data={categories.map((category) => ({ value: category._id, label: category.name }))}
@@ -506,109 +570,98 @@ const Shop = ({ adminMode = false }) => {
                     searchable
                     required
                   />
-                  <Select
-                    label="Collection"
-                    data={[
-                      { value: "best-sellers", label: "Best Sellers" },
-                      { value: "new", label: "New Additions" },
-                      { value: "classics", label: "Sacred Classics" },
-                    ]}
-                    value={form.collection}
-                    onChange={(value) => updateField("collection", value)}
-                  />
-                </Group>
-              </section>
+                </section>
 
-              <section className="product-editor-section">
-                <div>
-                  <Text fw={700}>Product image</Text>
-                  <Text size="xs" c="dimmed">
-                    Choose an image file to upload.
-                  </Text>
-                </div>
-                <div>
-                  <Text size="sm" fw={500} mb={6}>Upload an image</Text>
-                  <FileButton
-                    onChange={handleImageFile}
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                  >
-                    {(props) => (
-                      <button
-                        {...props}
-                        type="button"
-                        className={`category-image-picker product-image-picker${imagePreview ? " has-image" : ""}`}
-                        aria-label={imagePreview ? "Change product image" : "Choose product image"}
-                      >
-                        {imagePreview ? (
-                          <>
-                            <img src={imagePreview} alt="Product image preview" />
-                            <span className="category-image-picker-change">
-                              <Images size={16} />
-                              Change image
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <Images size={34} strokeWidth={1.6} />
-                            <span>Choose a product image</span>
-                            <small>PNG, JPG, WebP, or GIF; 10 MB max</small>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </FileButton>
-                </div>
-
-                <div>
-                  <Text size="sm" fw={500} mb={6}>Upload gallery images</Text>
-                  <Text size="xs" c="dimmed" mb="xs">
-                    Select multiple images at once, or choose more images again to add them.
-                  </Text>
-                  <FileButton
-                    onChange={handleExtraImageFiles}
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    multiple
-                  >
-                    {(props) => (
-                      <Button {...props} type="button" variant="light" color="dark">
-                        Choose gallery images
-                      </Button>
-                    )}
-                  </FileButton>
-                  {form.extraImageFiles.length > 0 && (
-                    <Text size="xs" c="dimmed" mt="xs">
-                      {form.extraImageFiles.map((file) => file.name).join(", ")}
+                <section className="product-editor-section">
+                  <div>
+                    <Text fw={700}>Product image</Text>
+                    <Text size="xs" c="dimmed">
+                      Choose an image file to upload.
                     </Text>
-                  )}
-                </div>
-              </section>
-            </div>
+                  </div>
+                  <div>
+                    <Text size="sm" fw={500} mb={6}>Upload an image</Text>
+                    <FileButton
+                      onChange={handleImageFile}
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                    >
+                      {(props) => (
+                        <button
+                          {...props}
+                          type="button"
+                          className={`category-image-picker product-image-picker${imagePreview ? " has-image" : ""}`}
+                          aria-label={imagePreview ? "Change product image" : "Choose product image"}
+                        >
+                          {imagePreview ? (
+                            <>
+                              <img src={imagePreview} alt="Product image preview" />
+                              <span className="category-image-picker-change">
+                                <Images size={16} />
+                                Change image
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Images size={34} strokeWidth={1.6} />
+                              <span>Choose a product image</span>
+                              <small>PNG, JPG, WebP, or GIF; 10 MB max</small>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </FileButton>
+                  </div>
 
-            <aside className="product-editor-preview">
-              <Text size="xs" fw={700} tt="uppercase" c="dimmed">Preview</Text>
-              <Image
-                src={form.image}
-                alt={form.title ? `${form.title} preview` : "Product preview"}
-                h={250}
-                fit="contain"
-                radius="sm"
-                bg="white"
-              />
-              <Stack gap={5}>
-                <Text size="xs" tt="uppercase" c="teal.7" fw={700}>{form.material || "Material"}</Text>
-                <Text fw={700} size="lg">{form.title || "Product name"}</Text>
-                <Text size="sm" c="dimmed">{categories.find((category) => category._id === form.category)?.name || "Category"}</Text>
-                <Text fw={700} size="lg">{form.price ? formatPrice(form.price) : "Price"}</Text>
-              </Stack>
-              <div className="product-editor-actions">
-                <Button type="submit" color="dark" fullWidth loading={savingProduct}>
-                  {editingProduct ? "Save changes" : "Save product"}
-                </Button>
-                <Button type="button" variant="subtle" color="gray" fullWidth onClick={() => setOpened(false)}>
-                  Cancel
-                </Button>
+                  <div>
+                    <Text size="sm" fw={500} mb={6}>Upload gallery images</Text>
+                    <Text size="xs" c="dimmed" mb="xs">
+                      Select multiple images at once, or choose more images again to add them.
+                    </Text>
+                    <FileButton
+                      onChange={handleExtraImageFiles}
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      multiple
+                    >
+                      {(props) => (
+                        <Button {...props} type="button" variant="light" color="dark">
+                          Choose gallery images
+                        </Button>
+                      )}
+                    </FileButton>
+                    {form.extraImageFiles.length > 0 && (
+                      <Text size="xs" c="dimmed" mt="xs">
+                        {form.extraImageFiles.map((file) => file.name).join(", ")}
+                      </Text>
+                    )}
+                  </div>
+                </section>
               </div>
-            </aside>
+
+              <aside className="product-editor-preview">
+                <Text size="xs" fw={700} tt="uppercase" c="dimmed">Preview</Text>
+                <Image
+                  src={form.image}
+                  alt={form.title ? `${form.title} preview` : "Product preview"}
+                  h={250}
+                  fit="contain"
+                  radius="sm"
+                  bg="white"
+                />
+                <Stack gap={5}>
+                  <Text size="xs" tt="uppercase" c="teal.7" fw={700}>{form.material || "Material"}</Text>
+                  <Text fw={700} size="lg">{form.title || "Product name"}</Text>
+                  <Text size="sm" c="dimmed">{categories.find((category) => category._id === form.category)?.name || "Category"}</Text>
+                  <Text fw={700} size="lg">{form.price ? formatPrice(form.price) : "Price"}</Text>
+                </Stack>
+                <div className="product-editor-actions">
+                  <Button type="submit" color="dark" fullWidth loading={savingProduct}>
+                    {editingProduct ? "Save changes" : "Save product"}
+                  </Button>
+                  <Button type="button" variant="subtle" color="gray" fullWidth onClick={() => setOpened(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </aside>
             </form>
           </Modal>
 
@@ -661,43 +714,30 @@ const Shop = ({ adminMode = false }) => {
   );
 };
 
-const ProductSection = ({ title, description, products }) => {
-  const scrollRef = useRef(null);
-
-  const scroll = (direction) => {
-    scrollRef.current?.scrollBy({
-      left: direction === "left" ? -360 : 360,
-      behavior: "smooth",
-    });
-  };
+const ProductSection = ({ title, products }) => {
+  if (products.length === 0) return null;
 
   return (
-    <Container size="xl" mb={80}>
-      <Group justify="space-between" align="flex-end" mb="lg">
+    <section>
+      <div className="mb-8 flex items-end justify-between gap-6 border-b border-stone-300 pb-5">
         <Stack gap={6}>
-          <Title order={2}>{title}</Title>
-          <Text c="dimmed" maw={560}>
-            {description}
+          <Title order={2} fz={{ base: 24, md: 30 }}>
+            {title}
+          </Title>
+          <Text c="dimmed" size="sm">
+            {products.length} {products.length === 1 ? "item" : "items"}
           </Text>
         </Stack>
-        <Group gap="xs" visibleFrom="md">
-          <ActionIcon variant="default" radius="xl" size="lg" onClick={() => scroll("left")}>
-            <ChevronLeft size={18} />
-          </ActionIcon>
-          <ActionIcon variant="default" radius="xl" size="lg" onClick={() => scroll("right")}>
-            <ChevronRight size={18} />
-          </ActionIcon>
-        </Group>
-      </Group>
+      </div>
 
-      <div ref={scrollRef} className="no-scrollbar flex gap-6 overflow-x-auto pb-2">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
         {products.map((product) => (
-          <div key={product.id} className="min-w-[300px] flex-shrink-0">
+          <div key={product.id} className="w-full">
             <Cards product={product} />
           </div>
         ))}
       </div>
-    </Container>
+    </section>
   );
 };
 

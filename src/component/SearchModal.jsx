@@ -63,8 +63,8 @@ const SearchModal = ({ opened, onClose }) => {
               <UnstyledButton
                 key={item.id}
                 component={Link}
-                to="/shop"
-                onClick={onClose}
+                to={`/shop/${encodeURIComponent(item.id)}`}
+                onClick={handleClose}
                 p="sm"
                 style={{ borderRadius: 8 }}
               >
