@@ -1,33 +1,62 @@
 import { useEffect, useState } from "react";
 import {
+  Button,
   Badge,
   Container,
   Divider,
   Group,
+  Modal,
+  Paper,
+  SimpleGrid,
   Stack,
   Text,
   Title,
 } from "@mantine/core";
+import { Eye } from "lucide-react";
 import { api, formatPrice } from "../lib/api";
+import Invoice from "../component/Invoice";
 
-// 👇 PUT THIS HERE
+const normalizeOrderStatus = (status) =>
+  ({
+    placed: "pending",
+    processing: "confirmed",
+    shipped: "confirmed",
+  })[status] ||
+  status ||
+  "pending";
+
 const getStatusColor = (status) => {
   const colors = {
-    placed: "gray",
-    processing: "orange",
-    shipped: "blue",
+    pending: "yellow",
+    confirmed: "blue",
     delivered: "green",
     cancelled: "red",
   };
-
-  return colors[status] || "gray";
+  return colors[normalizeOrderStatus(status)] || "gray";
 };
 
-// 👇 YOUR COMPONENT STARTS HERE
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+
+  const viewInvoice = (order) => {
+    setSelectedInvoice({
+      number: order.invoiceNumber || `Order-${order._id.slice(-7)}`,
+      date: order.createdAt,
+      items: (order.items || []).map((item, index) => ({
+        id: item.product?._id || item.product || item._id || `line-${index}`,
+        title: item.name || item.title || "Product",
+        price: Number(item.price),
+        quantity: Number(item.quantity),
+      })),
+      subtotal: Number(order.subtotal ?? order.totalAmount ?? 0),
+      shippingAddress: order.shippingAddress || {},
+      paymentMethod:
+        order.paymentMethod === "cod" ? "Cash on delivery" : order.paymentMethod,
+    });
+  };
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -48,43 +77,103 @@ const Orders = () => {
 
   return (
     <Container size="md" py={64}>
-      <Stack gap="lg">
-        <Title order={1}>Your orders</Title>
+      <Stack gap="xl">
+        <Group justify="space-between" align="flex-end">
+          <Title order={1}>Your orders</Title>
+          {!loading && orders.length > 0 && (
+            <Text c="dimmed" size="sm">
+              {orders.length} {orders.length === 1 ? "order" : "orders"}
+            </Text>
+          )}
+        </Group>
 
         {loading && <Text c="dimmed">Loading orders...</Text>}
 
         {!loading && message && <Text c="red">{message}</Text>}
 
         {!loading && !message && orders.length === 0 && (
-          <Text c="dimmed">You have no orders yet.</Text>
+          <Paper withBorder radius="md" p="xl" ta="center">
+            <Text c="dimmed">You have no orders yet.</Text>
+          </Paper>
         )}
 
         {orders.map((order) => (
-          <Stack key={order._id} gap="sm" py="md">
-            <Group justify="space-between">
-              <Text fw={600}>Order {order._id.slice(-8)}</Text>
+          <Paper key={order._id} withBorder radius="md" p="lg" shadow="xs">
+            <Stack gap="md">
+              {/* Header */}
+              <Group justify="space-between" wrap="nowrap">
+                <Text fw={600} size="lg">
+                  {order.invoiceNumber || `Order ${order._id.slice(-8)}`}
+                </Text>
+                <Badge
+                  color={getStatusColor(order.status)}
+                  variant="light"
+                  size="lg"
+                  tt="capitalize"
+                >
+                  {normalizeOrderStatus(order.status)}
+                </Badge>
+              </Group>
 
-              {/* 👇 CHANGE YOUR BADGE TO THIS */}
-              <Badge color={getStatusColor(order.status)} tt="capitalize">
-                {order.status}
-              </Badge>
-            </Group>
+              <Divider />
 
-            <Text size="sm" c="dimmed">
-              {new Date(order.createdAt).toLocaleDateString()}
-            </Text>
+              {/* Details */}
+              <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="md">
+                <Stack gap={2}>
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                    Date
+                  </Text>
+                  <Text>{new Date(order.createdAt).toLocaleDateString()}</Text>
+                </Stack>
 
-            <Text>{order.items?.length || 0} items</Text>
+                <Stack gap={2}>
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                    Items
+                  </Text>
+                  <Text>{order.items?.length || 0}</Text>
+                </Stack>
 
-            <Group justify="space-between">
-              <Text c="dimmed">Total</Text>
-              <Text fw={600}>{formatPrice(order.totalAmount)}</Text>
-            </Group>
+                <Stack gap={2}>
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                    Total
+                  </Text>
+                  <Text fw={600}>
+                    {formatPrice(order.subtotal ?? order.totalAmount)}
+                  </Text>
+                </Stack>
+              </SimpleGrid>
 
-            <Divider />
-          </Stack>
+              {/* Footer */}
+              <Group justify="flex-end">
+                <Button
+                  variant="default"
+                  color="dark"
+                  leftSection={<Eye size={16} />}
+                  onClick={() => viewInvoice(order)}
+                >
+                  View invoice
+                </Button>
+              </Group>
+            </Stack>
+          </Paper>
         ))}
       </Stack>
+
+      <Modal
+        opened={Boolean(selectedInvoice)}
+        onClose={() => setSelectedInvoice(null)}
+        centered
+        size="xl"
+        title={<Title order={3}>Order invoice</Title>}
+      >
+        {selectedInvoice && (
+          <Invoice
+            invoice={selectedInvoice}
+            onDone={() => setSelectedInvoice(null)}
+            doneLabel="Close"
+          />
+        )}
+      </Modal>
     </Container>
   );
 };

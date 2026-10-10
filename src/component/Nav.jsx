@@ -226,7 +226,13 @@ const MenuDropdown = ({ item }) => (
                 <Avatar src={avatarSrc || undefined} radius="xl" size={34} color="gold">
                   <User size={16} />
                 </Avatar>
-                <Text c="gold.5" size="sm">
+                <Text
+                  component={Link}
+                  to="/profile"
+                  c="gold.5"
+                  size="sm"
+                  underline="hover"
+                >
                   {user.fullName?.split(" ")[0]}
                 </Text>
                 {role === "admin" && (
@@ -303,9 +309,28 @@ const MenuDropdown = ({ item }) => (
 
           {/* Account buttons */}
           {isLoggedIn ? (
-            <Button variant="subtle" color="gold" justify="flex-start" onClick={logout}>
-              Sign out
-            </Button>
+            <Group gap="md">
+              <Anchor
+                component={Link}
+                to="/profile"
+                c="gold.5"
+                underline="hover"
+                onClick={menu.close}
+              >
+                {user?.fullName || "Your profile"}
+              </Anchor>
+              <Button
+                variant="subtle"
+                color="gold"
+                justify="flex-start"
+                onClick={() => {
+                  menu.close();
+                  logout();
+                }}
+              >
+                Sign out
+              </Button>
+            </Group>
           ) : (
             <Group>
               <Button component={Link} to="/login" variant="outline" color="gold" size="sm" onClick={menu.close}>

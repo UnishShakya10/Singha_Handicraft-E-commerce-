@@ -10,7 +10,7 @@ const Invoice = ({ invoice, onDone, doneLabel = "Continue shopping" }) => {
       <Group justify="flex-end" className="no-print">
         <Button variant="default" onClick={onDone}>{doneLabel}</Button>
         <Button color="dark" leftSection={<Printer size={16} />} onClick={() => window.print()}>
-          Print / Save PDF
+          Download Pdf
         </Button>
       </Group>
 
