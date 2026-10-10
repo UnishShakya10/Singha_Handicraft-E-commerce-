@@ -114,7 +114,7 @@
     useEffect(() => {
       let active = true;
       (async () => {
-        const [o, c] = await Promise.allSettled([api.get("/orders"), api.get("/users/getAll")]);
+        const [o, c] = await Promise.allSettled([api.get("/orders/admin"), api.get("/users/getAll")]);
         if (!active) return;
         if (o.status === "fulfilled") { setOrders(o.value.data); setOrdersMessage(""); }
         else setOrdersMessage(errMsg(o.reason, "Could not load orders."));
