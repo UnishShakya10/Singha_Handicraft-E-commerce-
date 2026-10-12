@@ -845,3 +845,19 @@ h3,
   .invoice-print { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; }
   .no-print { display: none !important; }
 }
+
+
+.product-gallery-sticky {
+  position: sticky;
+  top: 110px;
+}
+
+@media (max-width: 767px) {
+  .product-gallery-sticky {
+    position: static;
+  }
+
+  .product-actions {
+    position: static;
+  }
+}

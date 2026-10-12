@@ -140,7 +140,7 @@ const ProductDetail = () => {
 
         <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={64} style={{ alignItems: "start" }}>
           {/* LEFT: gallery (stays in view while you scroll on desktop) */}
-          <div style={{ position: "sticky", top: 110 }}>
+          <div className="product-gallery-sticky">
             {images.length > 0 ? (
               <ProductGallery
                 key={product.id}
@@ -191,7 +191,7 @@ const ProductDetail = () => {
             </Group>
 
             {/* Buttons */}
-            <Group gap="md">
+            <Group gap="md" className="product-actions">
               <Button
                 color="gold"
                 c="black"
