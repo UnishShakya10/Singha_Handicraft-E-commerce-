@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import {
   ActionIcon,
+  Badge,
   Button,
   Card,
   Group,
@@ -11,18 +13,25 @@ import {
 } from "@mantine/core";
 import { Heart, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "../context/CartContext";
+import { useProducts } from "../context/ProductContext";
 import { useWishlist } from "../context/WishlistContext";
 import { formatPrice } from "../lib/api";
 
 const Cards = ({ product, onDelete }) => {
   const { addItem } = useCart();
+  const { productsLoading, productsError } = useProducts();
   const { isSaved, toggleItem } = useWishlist();
+  const [cartMessage, setCartMessage] = useState("");
   const liked = isSaved(product.id);
+  const stock = Number(product.stock || 0);
+  const availabilityKnown = !productsLoading && !productsError;
+  const outOfStock = availabilityKnown && stock < 1;
 
   const handleAdd = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    addItem(product);
+    const result = addItem(product);
+    setCartMessage(result.ok ? "" : result.message);
   };
 
   const handleWishlist = (event) => {
@@ -56,6 +65,18 @@ const Cards = ({ product, onDelete }) => {
     >
       <div style={{ position: "relative" }}>
         <Image src={product.image} alt={product.title} h={260} fit="cover" />
+
+        <Badge
+          pos="absolute"
+          bottom={12}
+          left={12}
+          color={!availabilityKnown ? "gray" : outOfStock ? "red" : "green"}
+          variant="filled"
+        >
+          {!availabilityKnown
+            ? productsLoading ? "Checking stock" : "Stock unavailable"
+            : outOfStock ? "Out of Stock" : `In Stock · ${stock}`}
+        </Badge>
 
         <ActionIcon
           pos="absolute"
@@ -91,6 +112,12 @@ const Cards = ({ product, onDelete }) => {
           {product.title}
         </Title>
 
+        {cartMessage && (
+          <Text size="xs" c="red" role="status">
+            {cartMessage}
+          </Text>
+        )}
+
         <Group justify="space-between" align="flex-end" mt={4}>
           <Stack gap={2}>
             <Text size="xs" tt="uppercase" c="dimmed" lts={1.2}>
@@ -106,9 +133,10 @@ const Cards = ({ product, onDelete }) => {
             c="black"
             radius="md"
             leftSection={<ShoppingBag size={16} />}
+            disabled={!availabilityKnown || outOfStock}
             onClick={handleAdd}
           >
-            Add
+            {!availabilityKnown ? "Unavailable" : outOfStock ? "Sold out" : "Add"}
           </Button>
         </Group>
       </Stack>

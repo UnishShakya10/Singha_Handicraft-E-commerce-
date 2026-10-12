@@ -39,6 +39,9 @@ const mapProduct = (product, categories = []) => {
     ...product,
     id: product._id || product.id,
     title: product.name || product.title,
+    stock: Number.isSafeInteger(Number(product.stock)) && Number(product.stock) >= 0
+      ? Number(product.stock)
+      : 0,
     image: images[0] || "",
     images,
     categoryId,
@@ -57,10 +60,19 @@ const mapProduct = (product, categories = []) => {
 
 export const ProductProvider = ({ children }) => {
   const { role } = useAuth();
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState(() =>
+    initialProducts.map((product) => mapProduct(product))
+  );
   const [categories, setCategories] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState("");
+
+  const refreshProducts = useCallback(async () => {
+    const { data } = await api.get(role === "admin" ? "/products/admin" : "/products");
+    const refreshedProducts = data.map((product) => mapProduct(product, categories));
+    setProducts(refreshedProducts);
+    return refreshedProducts;
+  }, [categories, role]);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -158,6 +170,7 @@ export const ProductProvider = ({ children }) => {
       categories,
       productsLoading,
       productsError,
+      refreshProducts,
       addProduct,
       updateProduct,
       addCategory,
@@ -165,7 +178,7 @@ export const ProductProvider = ({ children }) => {
       removeProduct,
       uploadImage,
     }),
-    [products, categories, productsLoading, productsError, addProduct, updateProduct]
+    [products, categories, productsLoading, productsError, refreshProducts, addProduct, updateProduct]
   );
 
   return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;

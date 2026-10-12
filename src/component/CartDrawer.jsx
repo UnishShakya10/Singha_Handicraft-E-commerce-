@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import {
   ActionIcon,
+  Alert,
   Button,
   Divider,
   Drawer,
@@ -19,10 +21,25 @@ import { formatPrice } from "../lib/api";
 const CartDrawer = ({ opened, onClose }) => {
   const { items: cartItems, removeItem, setQuantity, clear } = useCart();
   const { products } = useProducts();
-  const items = cartItems.filter((item) => (
-    products.some((product) => product.id === item.id && product.isActive !== false)
-  ));
+  const [message, setMessage] = useState("");
+  const items = cartItems
+    .map((item) => ({
+      ...item,
+      currentProduct: products.find((product) => product.id === item.id),
+    }))
+    .map((item) => ({
+      ...item,
+      unavailable: !item.currentProduct || item.currentProduct.isActive === false,
+      stock:
+        item.currentProduct && item.currentProduct.isActive !== false
+          ? Number(item.currentProduct.stock || 0)
+          : 0,
+    }));
   const subtotal = items.reduce((total, item) => total + Number(item.price) * item.quantity, 0);
+  const updateCartQuantity = (item, quantity) => {
+    const result = setQuantity(item.id, quantity, item.stock);
+    setMessage(result.ok ? "" : result.message);
+  };
 
   return (
     <Drawer
@@ -39,6 +56,7 @@ const CartDrawer = ({ opened, onClose }) => {
     >
       <Stack h="calc(100vh - 140px)" justify="space-between">
         <ScrollArea flex={1}>
+          {message && <Alert color="red" mb="md">{message}</Alert>}
           {items.length === 0 ? (
             <Stack align="center" py="xl" gap="md">
               <Text c="dimmed">Your cart is empty.</Text>
@@ -64,11 +82,23 @@ const CartDrawer = ({ opened, onClose }) => {
                     <Text c="gold.6" size="sm">
                       {formatPrice(item.price)}
                     </Text>
+                    <Text size="xs" c={item.unavailable ? "red" : item.stock > 0 ? "green.8" : "red"}>
+                      {item.unavailable
+                        ? "No longer available"
+                        : item.stock > 0 ? `${item.stock} in stock` : "Out of stock"}
+                    </Text>
+                    {(item.unavailable || item.quantity > item.stock) && (
+                      <Text size="xs" c="red">
+                        {item.unavailable
+                          ? "Remove this item before checkout."
+                          : `Only ${item.stock} available. Reduce quantity.`}
+                      </Text>
+                    )}
                     <Group gap="xs">
                       <ActionIcon
                         variant="default"
                         size="sm"
-                        onClick={() => setQuantity(item.id, item.quantity - 1)}
+                        onClick={() => updateCartQuantity(item, item.quantity - 1)}
                       >
                         <Minus size={14} />
                       </ActionIcon>
@@ -78,7 +108,8 @@ const CartDrawer = ({ opened, onClose }) => {
                       <ActionIcon
                         variant="default"
                         size="sm"
-                        onClick={() => setQuantity(item.id, item.quantity + 1)}
+                        disabled={item.quantity >= item.stock}
+                        onClick={() => updateCartQuantity(item, item.quantity + 1)}
                       >
                         <Plus size={14} />
                       </ActionIcon>

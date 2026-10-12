@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
-import { ActionIcon, Alert, Button, Container, FileButton, Group, Image, Modal, Select, SimpleGrid, Stack, Switch, Table, Text, Textarea, TextInput, Title } from "@mantine/core";
+import { ActionIcon, Alert, Badge, Button, Container, FileButton, Group, Image, Modal, Select, SimpleGrid, Stack, Switch, Table, Text, Textarea, TextInput, Title } from "@mantine/core";
 import { ChevronLeft, ChevronRight, Images, Pencil, Plus, Trash2 } from "lucide-react";
 import Cards from "../component/Cards";
 import { useProducts } from "../context/ProductContext";
@@ -278,9 +278,14 @@ const Shop = ({ adminMode = false }) => {
                       </Table.Td>
                       <Table.Td><Text size="sm">{product.category || "Uncategorized"}</Text></Table.Td>
                       <Table.Td>
-                        <Text size="sm" c={Number(product.stock || 0) > 0 ? "dark" : "red"}>
-                          {Number(product.stock || 0)}
-                        </Text>
+                        <Stack gap={3} align="flex-start">
+                          <Text size="sm" fw={600}>{Number(product.stock || 0)}</Text>
+                          {Number(product.stock || 0) < 1 && (
+                            <Badge color="red" variant="light" size="xs">
+                              Out of stock
+                            </Badge>
+                          )}
+                        </Stack>
                       </Table.Td>
                       <Table.Td ta="right"><Text size="sm" fw={600}>{formatPrice(product.price)}</Text></Table.Td>
                       <Table.Td>

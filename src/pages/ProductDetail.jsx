@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import {
   Accordion,
+  Alert,
   Badge,
   Button,
   Container,
   Grid,
   Group,
   List,
+  NumberInput,
   SimpleGrid,
   Stack,
   Text,
@@ -53,12 +55,28 @@ const SectionTitle = ({ eyebrow, children }) => (
 
 const ProductDetail = () => {
   const { productId } = useParams();
-  const { products } = useProducts();
+  const navigate = useNavigate();
+  const { products, productsLoading, productsError } = useProducts();
   const { addItem } = useCart();
   const { isSaved, toggleItem } = useWishlist();
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [selection, setSelection] = useState({ productId, quantity: 1, message: "" });
+  const quantity = selection.productId === productId ? selection.quantity : 1;
+  const cartMessage = selection.productId === productId ? selection.message : "";
 
   const product = products.find((item) => item.id === productId && item.isActive !== false);
+  const stock = Number(product?.stock || 0);
+  const availabilityKnown = !productsLoading && !productsError;
+  const outOfStock = availabilityKnown && stock < 1;
+  const canPurchase = availabilityKnown && !outOfStock;
+
+  const setProductSelection = (updates) =>
+    setSelection((current) => ({
+      productId,
+      quantity: current.productId === productId ? current.quantity : 1,
+      message: current.productId === productId ? current.message : "",
+      ...updates,
+    }));
 
   if (!product) {
     return (
@@ -80,6 +98,11 @@ const ProductDetail = () => {
   }
 
   const isProductSaved = isSaved(product.id);
+  const addSelectedQuantity = () => {
+    const result = addItem(product, quantity);
+    setProductSelection({ message: result.ok ? "" : result.message });
+    return result.ok;
+  };
   const detailSections = [
     ["Description", product.description?.trim() || "Description details have not been provided for this piece yet."],
     ["Iconography", product.iconography?.trim() || "Iconography details have not been provided for this piece yet."],
@@ -190,6 +213,41 @@ const ProductDetail = () => {
               )}
             </Group>
 
+            <Group gap="sm" align="center">
+              <Badge
+                color={!availabilityKnown ? "gray" : outOfStock ? "red" : "green"}
+                variant="light"
+              >
+                {!availabilityKnown
+                  ? productsLoading ? "Checking stock" : "Availability unavailable"
+                  : outOfStock ? "Out of Stock" : `In Stock · ${stock} available`}
+              </Badge>
+              {canPurchase && (
+                <NumberInput
+                  label="Quantity"
+                  min={1}
+                  max={stock}
+                  step={1}
+                  value={quantity}
+                  w={110}
+                  onChange={(value) => {
+                    const requested = Number(value);
+                    if (!Number.isFinite(requested)) return;
+                    if (requested > stock) {
+                      setProductSelection({ message: `Only ${stock} available.` });
+                    } else {
+                      setProductSelection({ message: "" });
+                    }
+                    setProductSelection({
+                      quantity: Math.max(1, Math.min(stock, Math.floor(requested))),
+                    });
+                  }}
+                />
+              )}
+            </Group>
+
+            {cartMessage && <Alert color="red">{cartMessage}</Alert>}
+
             {/* Buttons */}
             <Group gap="md" className="product-actions">
               <Button
@@ -202,9 +260,26 @@ const ProductDetail = () => {
                 fz="sm"
                 px={36}
                 leftSection={<ShoppingBag size={18} />}
-                onClick={() => addItem(product)}
+                disabled={!canPurchase}
+                onClick={addSelectedQuantity}
               >
                 Add to cart
+              </Button>
+              <Button
+                color="dark"
+                c="white"
+                size="lg"
+                radius="xs"
+                tt="uppercase"
+                lts={1.5}
+                fz="sm"
+                px={36}
+                disabled={!canPurchase}
+                onClick={() => {
+                  if (addSelectedQuantity()) navigate("/cart");
+                }}
+              >
+                Buy now
               </Button>
               <Button
                 variant="outline"

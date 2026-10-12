@@ -18,6 +18,7 @@ import LoginPage from "./sign/login/LoginPage";
 import SignupPage from "./sign/login/SignupPage";
 import PrivateRoute from "./routes/PrivateRoute";
 import AdminRoute from "./routes/AdminRoute";
+import CustomerRoute from "./routes/CustomerRoute";
 
 const App = () => {
   const { pathname, hash } = useLocation();
@@ -64,7 +65,9 @@ const App = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/invoice/:orderId" element={<InvoicePage />} />
-            <Route path="/cart" element={<CartPage />} />
+            <Route element={<CustomerRoute />}>
+              <Route path="/cart" element={<CartPage />} />
+            </Route>
           </Route>
 
           {/* Admin Protected Route */}

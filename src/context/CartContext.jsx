@@ -17,22 +17,37 @@ export const CartProvider = ({ children }) => {
   const [items, setItems] = useState(readCart);
 
   const addItem = useCallback(
-    (product) => {
-      setItems((currentItems) => {
-        const existing = currentItems.find((item) => item.id === product.id);
-        const next = existing
-          ? currentItems.map((item) =>
-              item.id === product.id
-                ? { ...item, quantity: item.quantity + 1 }
-                : item
-            )
-          : [...currentItems, { ...product, quantity: 1 }];
+    (product, quantity = 1) => {
+      const stock = Number(product.stock || 0);
+      const existing = items.find((item) => item.id === product.id);
+      const requestedQuantity = (existing?.quantity || 0) + Number(quantity);
 
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        return next;
-      });
+      if (!Number.isSafeInteger(Number(quantity)) || Number(quantity) < 1) {
+        return { ok: false, message: "Choose a valid quantity." };
+      }
+      if (stock < 1) {
+        return { ok: false, message: "This item is out of stock." };
+      }
+      if (requestedQuantity > stock) {
+        return {
+          ok: false,
+          message: `Only ${stock} available. Your cart already contains ${existing?.quantity || 0}.`,
+        };
+      }
+
+      const next = existing
+        ? items.map((item) =>
+            item.id === product.id
+              ? { ...item, ...product, quantity: requestedQuantity }
+              : item
+          )
+        : [...items, { ...product, quantity: Number(quantity) }];
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      setItems(next);
+      return { ok: true };
     },
-    []
+    [items]
   );
 
   const removeItem = useCallback(
@@ -47,22 +62,37 @@ export const CartProvider = ({ children }) => {
   );
 
   const setQuantity = useCallback(
-    (id, quantity) => {
-      setItems((currentItems) => {
-        if (quantity < 1) {
-          const next = currentItems.filter((item) => item.id !== id);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-          return next;
-        }
-
-        const next = currentItems.map((item) =>
-          item.id === id ? { ...item, quantity } : item
-        );
+    (id, quantity, availableStock) => {
+      if (quantity < 1) {
+        const next = items.filter((item) => item.id !== id);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        return next;
-      });
+        setItems(next);
+        return { ok: true };
+      }
+
+      if (!Number.isSafeInteger(quantity)) {
+        return { ok: false, message: "Choose a whole-number quantity." };
+      }
+
+      const currentItem = items.find((item) => item.id === id);
+      const stock = Number(availableStock ?? currentItem?.stock ?? 0);
+      if (quantity > stock && quantity > Number(currentItem?.quantity || 0)) {
+        return {
+          ok: false,
+          message: stock > 0
+            ? `Only ${stock} available. Reduce the quantity to continue.`
+            : "This item is out of stock. Remove it from your cart to continue.",
+        };
+      }
+
+      const next = items.map((item) =>
+        item.id === id ? { ...item, stock, quantity } : item
+      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      setItems(next);
+      return { ok: true };
     },
-    []
+    [items]
   );
 
   const clear = useCallback(() => {

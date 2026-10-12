@@ -1,6 +1,6 @@
   import { useEffect, useState } from "react";
   import {
-    ActionIcon, Badge, Button, FileButton, Group, Image, Modal, Paper,
+    ActionIcon, Badge, Button, Divider, FileButton, Group, Image, Modal, Paper,
     Select, SimpleGrid, Stack, Table, Textarea, Text, TextInput, Title,
   } from "@mantine/core";
   import {
@@ -85,8 +85,11 @@
     const [customersMessage, setCustomersMessage] = useState("");
     const [ordersLoading, setOrdersLoading] = useState(true);
     const [updatingOrderId, setUpdatingOrderId] = useState("");
+    const [updatingPaymentOrderId, setUpdatingPaymentOrderId] = useState("");
     const [invoiceOpened, setInvoiceOpened] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [orderOpened, setOrderOpened] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
 
     // ── State: Category form ──
     const [categoryName, setCategoryName] = useState("");
@@ -204,6 +207,34 @@
       }
     };
 
+    const handlePaymentStatusChange = async (orderId, paymentStatus) => {
+      setUpdatingPaymentOrderId(orderId);
+      setOrdersMessage("");
+      try {
+        const { data } = await api.patch(`/orders/${orderId}`, { paymentStatus });
+        const updatedOrder = data?.order || data;
+        if (updatedOrder?.paymentStatus !== paymentStatus) {
+          throw new Error(
+            "The server did not confirm the payment status update. The backend must support paymentStatus."
+          );
+        }
+        setOrders((current) =>
+          current.map((order) =>
+            order._id === orderId ? { ...order, ...updatedOrder } : order
+          )
+        );
+        setSelectedOrder((current) =>
+          current?._id === orderId
+            ? { ...current, ...updatedOrder }
+            : current
+        );
+      } catch (error) {
+        setOrdersMessage(errMsg(error, "Could not update payment status."));
+      } finally {
+        setUpdatingPaymentOrderId("");
+      }
+    };
+
     const handleViewInvoice = (order) => {
       setInvoiceOpened(true);
       setSelectedInvoice({
@@ -219,6 +250,33 @@
         shippingAddress: order.shippingAddress || {},
         paymentMethod: order.paymentMethod === "cod" ? "Cash on delivery" : order.paymentMethod,
       });
+    };
+
+    const handleViewOrder = (order) => {
+      const items = (order.items || []).map((item, index) => {
+        const product = item.product && typeof item.product === "object"
+          ? item.product
+          : products.find((candidate) =>
+              String(candidate._id || candidate.id) === String(item.product || item.productId)
+            );
+        const image =
+          item.image ||
+          item.productImage ||
+          product?.image ||
+          product?.images?.[0] ||
+          "";
+
+        return {
+          id: item.product?._id || item.product || item._id || `line-${index}`,
+          title: item.name || item.title || product?.title || product?.name || "Product",
+          image: fileUrl(image),
+          price: Number(item.price ?? product?.price ?? 0),
+          quantity: Number(item.quantity || 0),
+        };
+      });
+
+      setSelectedOrder({ ...order, items });
+      setOrderOpened(true);
     };
 
     const openNav = (key) => {
@@ -579,66 +637,117 @@
 
                 {ordersLoading && orders.length === 0 ? (
                   <Text size="sm" c="dimmed">Loading orders...</Text>
+                ) : orders.length === 0 ? (
+                  <Text ta="center" c="dimmed" py="xl">No orders found.</Text>
                 ) : (
-                  <Table.ScrollContainer minWidth={980}>
-                    <Table highlightOnHover verticalSpacing="sm" className="admin-table">
-                      <Table.Thead>
-                        <Table.Tr>
-                          <Table.Th>Invoice no.</Table.Th>
-                          <Table.Th>Date</Table.Th>
-                          <Table.Th>Customer</Table.Th>
-                          <Table.Th>Phone</Table.Th>
-                          <Table.Th ta="right">Total</Table.Th>
-                          <Table.Th>Status</Table.Th>
-                          <Table.Th />
-                        </Table.Tr>
-                      </Table.Thead>
-                      <Table.Tbody>
-                        {orders.map((order) => (
-                          <Table.Tr key={order._id}>
-                            <Table.Td><Text size="sm" fw={600}>{order.invoiceNumber || `Order-${order._id.slice(-7)}`}</Text></Table.Td>
-                            <Table.Td><Text size="sm">{new Date(order.createdAt).toLocaleDateString()}</Text></Table.Td>
-                            <Table.Td>
-                              <Text size="sm">{order.shippingAddress?.fullName || order.user?.fullName || "Unknown customer"}</Text>
-                            </Table.Td>
-                            <Table.Td><Text size="sm">{order.shippingAddress?.phone || "—"}</Text></Table.Td>
-                            <Table.Td ta="right"><Text size="sm" fw={600}>{formatPrice(order.subtotal ?? order.totalAmount)}</Text></Table.Td>
-                            <Table.Td>
-                              <Group gap="xs" wrap="nowrap">
-                                <Badge color={getOrderStatusColor(order.status)} variant="light" tt="capitalize">{normalizeOrderStatus(order.status)}</Badge>
-                                <Select
-                                  aria-label={`Change order ${order.invoiceNumber || order._id.slice(-7)} status`}
-                                  size="xs" w={130}
-                                  data={orderStatuses.map((status) => ({
-                                    value: status,
-                                    label: status.charAt(0).toUpperCase() + status.slice(1),
-                                  }))}
-                                  value={normalizeOrderStatus(order.status)}
-                                  disabled={updatingOrderId === order._id}
-                                  onChange={(status) => status && status !== normalizeOrderStatus(order.status) && handleOrderStatusChange(order._id, status)}
-                                />
-                              </Group>
-                            </Table.Td>
-                            <Table.Td>
-                              <Button
-                                variant="default"
-                                size="xs"
-                                leftSection={<Eye size={14} />}
-                                onClick={() => handleViewInvoice(order)}
+                  <Stack gap="md" px="md" pb="md">
+                    {orders.map((order) => (
+                      <Paper key={order._id} withBorder radius="md" p="md" className="admin-order-card">
+                        <Group justify="space-between" align="flex-start" mb="md" wrap="wrap">
+                          <div>
+                            <Text fw={700}>
+                              {order.invoiceNumber || `Order-${order._id.slice(-7)}`}
+                            </Text>
+                            <Text size="sm" c="dimmed">
+                              {new Date(order.createdAt).toLocaleString()}
+                            </Text>
+                          </div>
+                          <Text fw={700} size="lg">
+                            {formatPrice(order.subtotal ?? order.totalAmount)}
+                          </Text>
+                        </Group>
+
+                        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+                          <Paper
+                                withBorder
+                                radius="md"
+                                p="md"
+                                style={{
+                                  borderColor: {
+                                    pending: "#eab308",
+                                    confirmed: "#3b82f6",
+                                    delivered: "#22c55e",
+                                    cancelled: "#ef4444",
+                                  }[normalizeOrderStatus(order.status)] || "#d1d5db",
+                                  borderWidth: 2,
+                                  transition: "border-color 0.3s ease",
+                                }}
                               >
-                                View invoice
-                              </Button>
-                            </Table.Td>
-                          </Table.Tr>
-                        ))}
-                        {orders.length === 0 && !ordersMessage && (
-                          <Table.Tr>
-                            <Table.Td colSpan={7}><Text ta="center" c="dimmed" py="xl">No orders found.</Text></Table.Td>
-                          </Table.Tr>
-                        )}
-                      </Table.Tbody>
-                    </Table>
-                  </Table.ScrollContainer>
+                            <Stack gap={4}>
+                              <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Customer</Text>
+                              <Text size="sm" fw={600}>
+                                {order.shippingAddress?.fullName || order.user?.fullName || "Unknown customer"}
+                              </Text>
+                              <Text size="sm" c="dimmed">{order.shippingAddress?.phone || "No phone provided"}</Text>
+                              <Text size="sm" c="dimmed">
+                                Payment method: {order.paymentMethod || "Not specified"}
+                              </Text>
+                            </Stack>
+                          </Paper>
+                          <div>
+                            <Select
+                              label="Fulfillment status"
+                              aria-label={`Change order ${order.invoiceNumber || order._id.slice(-7)} status`}
+                              size="sm"
+                              w="100%"
+                              data={orderStatuses.map((status) => ({
+                                value: status,
+                                label: status.charAt(0).toUpperCase() + status.slice(1),
+                              }))}
+                              value={normalizeOrderStatus(order.status)}
+                              disabled={updatingOrderId === order._id}
+                              onChange={(status) =>
+                                status &&
+                                status !== normalizeOrderStatus(order.status) &&
+                                handleOrderStatusChange(order._id, status)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Select
+                              label="Payment status"
+                              aria-label={`Change payment status for order ${order.invoiceNumber || order._id.slice(-7)}`}
+                              size="sm"
+                              w="100%"
+                              data={[
+                                { value: "pending", label: "Pending" },
+                                { value: "paid", label: "Paid" },
+                              ]}
+                              value={order.paymentStatus || "pending"}
+                              disabled={
+                                updatingPaymentOrderId === order._id ||
+                                updatingOrderId === order._id
+                              }
+                              onChange={(paymentStatus) =>
+                                paymentStatus &&
+                                paymentStatus !== (order.paymentStatus || "pending") &&
+                                handlePaymentStatusChange(order._id, paymentStatus)
+                              }
+                            />
+                          </div>
+                        </SimpleGrid>
+
+                        <Divider my="md" />
+
+                        <Group justify="flex-end" gap="sm" wrap="wrap">
+                          <Button
+                            variant="default"
+                            leftSection={<Eye size={16} />}
+                            onClick={() => handleViewOrder(order)}
+                          >
+                            View order
+                          </Button>
+                          <Button
+                            variant="light"
+                            leftSection={<ClipboardList size={16} />}
+                            onClick={() => handleViewInvoice(order)}
+                          >
+                            View invoice
+                          </Button>
+                        </Group>
+                      </Paper>
+                    ))}
+                  </Stack>
                 )}
               </section>
             )}
@@ -658,6 +767,114 @@
                   doneLabel="Close"
                 />
               ) : null}
+            </Modal>
+
+            <Modal
+              opened={orderOpened}
+              onClose={() => setOrderOpened(false)}
+              centered
+              size="lg"
+              title={<Title order={3}>Order details</Title>}
+            >
+              {selectedOrder && (
+                <Stack gap="md">
+                  <Group justify="space-between" align="flex-start">
+                    <div>
+                      <Text fw={700}>
+                        {selectedOrder.invoiceNumber || `Order-${selectedOrder._id.slice(-7)}`}
+                      </Text>
+                      <Text size="sm" c="dimmed">
+                        {new Date(selectedOrder.createdAt).toLocaleString()}
+                      </Text>
+                    </div>
+                    <Badge
+                      color={getOrderStatusColor(selectedOrder.status)}
+                      variant="light"
+                      tt="capitalize"
+                    >
+                      {normalizeOrderStatus(selectedOrder.status)}
+                    </Badge>
+                  </Group>
+
+                  <Group gap="xs">
+                    <Text size="sm" fw={600}>Payment method:</Text>
+                    <Text size="sm">{selectedOrder.paymentMethod || "Not specified"}</Text>
+                    <Badge
+                      color={selectedOrder.paymentStatus === "paid" ? "green" : "yellow"}
+                      variant="light"
+                      tt="capitalize"
+                    >
+                      {selectedOrder.paymentStatus || "pending"}
+                    </Badge>
+                  </Group>
+
+                  <Paper withBorder radius="md" p="sm">
+                    <Text fw={600}>
+                      {selectedOrder.shippingAddress?.fullName ||
+                        selectedOrder.user?.fullName ||
+                        "Unknown customer"}
+                    </Text>
+                    <Text size="sm" c="dimmed">
+                      {selectedOrder.shippingAddress?.phone || "No phone provided"}
+                    </Text>
+                    <Text size="sm" c="dimmed">
+                      {[
+                        selectedOrder.shippingAddress?.address,
+                        selectedOrder.shippingAddress?.city,
+                        selectedOrder.shippingAddress?.state,
+                        selectedOrder.shippingAddress?.postalCode,
+                      ].filter(Boolean).join(", ") || "No delivery address provided"}
+                    </Text>
+                  </Paper>
+
+                  <Stack gap="sm">
+                    <Text fw={600}>Items</Text>
+                    {selectedOrder.items.length ? selectedOrder.items.map((item) => (
+                      <Group key={item.id} wrap="nowrap" align="center">
+                        {item.image ? (
+                          <Image
+                            src={item.image}
+                            alt={item.title}
+                            w={72}
+                            h={72}
+                            radius="sm"
+                            fit="cover"
+                          />
+                        ) : (
+                          <Paper
+                            w={72}
+                            h={72}
+                            radius="sm"
+                            withBorder
+                            c="dimmed"
+                            style={{ display: "grid", placeItems: "center", flexShrink: 0 }}
+                          >
+                            <Package size={24} />
+                          </Paper>
+                        )}
+                        <Stack gap={2} style={{ flex: 1 }}>
+                          <Text fw={500}>{item.title}</Text>
+                          <Text size="sm" c="dimmed">
+                            {formatPrice(item.price)} × {item.quantity}
+                          </Text>
+                        </Stack>
+                        <Text fw={600}>
+                          {formatPrice(item.price * item.quantity)}
+                        </Text>
+                      </Group>
+                    )) : (
+                      <Text size="sm" c="dimmed">No items are available for this order.</Text>
+                    )}
+                  </Stack>
+
+                  <Group justify="space-between" pt="sm" style={{ borderTop: "1px solid var(--mantine-color-gray-3)" }}>
+                    <Text fw={700}>Total</Text>
+                    <Text fw={700}>
+                      {formatPrice(selectedOrder.subtotal ?? selectedOrder.totalAmount)}
+                    </Text>
+                  </Group>
+                </Stack>
+              )}
             </Modal>
 
             {/* ── Customers (Customer[]) ── */}

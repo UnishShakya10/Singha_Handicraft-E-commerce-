@@ -262,11 +262,13 @@ const MenuDropdown = ({ item }) => (
           </ActionIcon>
 
           {/* Cart */}
-          <Indicator disabled={count === 0} label={count} size={16} color="gold" c="black">
-            <ActionIcon variant="subtle" c="white" size="lg" onClick={cart.open} aria-label="Cart">
-              <ShoppingBag size={20} />
-            </ActionIcon>
-          </Indicator>
+          {role !== "admin" && (
+            <Indicator disabled={count === 0} label={count} size={16} color="gold" c="black">
+              <ActionIcon variant="subtle" c="white" size="lg" onClick={cart.open} aria-label="Cart">
+                <ShoppingBag size={20} />
+              </ActionIcon>
+            </Indicator>
+          )}
 
           {/* Burger (mobile only) */}
           <Burger hiddenFrom="md" opened={menuOpen} onClick={menu.toggle} color="white" size="sm" />
@@ -310,6 +312,17 @@ const MenuDropdown = ({ item }) => (
           {/* Account buttons */}
           {isLoggedIn ? (
             <Group gap="md">
+              {role === "admin" && (
+                <Button
+                  component={Link}
+                  to="/admin"
+                  variant="subtle"
+                  color="gold"
+                  onClick={menu.close}
+                >
+                  Admin dashboard
+                </Button>
+              )}
               <Anchor
                 component={Link}
                 to="/profile"
@@ -346,7 +359,7 @@ const MenuDropdown = ({ item }) => (
 
       <SearchModal opened={searchOpen} onClose={search.close} />
       <WishlistDrawer />
-      <CartDrawer opened={cartOpen} onClose={cart.close} />
+      {role !== "admin" && <CartDrawer opened={cartOpen} onClose={cart.close} />}
     </Box>
   );
 };
