@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
   Accordion,
+  ActionIcon,
   Alert,
   Badge,
   Button,
@@ -9,7 +10,6 @@ import {
   Grid,
   Group,
   List,
-  NumberInput,
   SimpleGrid,
   Stack,
   Text,
@@ -20,6 +20,8 @@ import {
   Check,
   Heart,
   MessageCircle,
+  Minus,
+  Plus,
   ShoppingBag,
 } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
@@ -223,26 +225,44 @@ const ProductDetail = () => {
                   : outOfStock ? "Out of Stock" : `In Stock · ${stock} available`}
               </Badge>
               {canPurchase && (
-                <NumberInput
-                  label="Quantity"
-                  min={1}
-                  max={stock}
-                  step={1}
-                  value={quantity}
-                  w={110}
-                  onChange={(value) => {
-                    const requested = Number(value);
-                    if (!Number.isFinite(requested)) return;
-                    if (requested > stock) {
-                      setProductSelection({ message: `Only ${stock} available.` });
-                    } else {
-                      setProductSelection({ message: "" });
+                <Group gap={0} align="center">
+                  <ActionIcon
+                    variant="default"
+                    size={38}
+                    radius="md"
+                    aria-label="Decrease quantity"
+                    disabled={quantity <= 1 || stock <= 0}
+                    onClick={() =>
+                      setProductSelection({
+                        quantity: Math.max(1, quantity - 1),
+                        message: "",
+                      })
                     }
-                    setProductSelection({
-                      quantity: Math.max(1, Math.min(stock, Math.floor(requested))),
-                    });
-                  }}
-                />
+                  >
+                    <Minus size={16} />
+                  </ActionIcon>
+
+                  <Text w={45} ta="center" fw={600} size="sm">
+                    {quantity}
+                  </Text>
+
+                  <ActionIcon
+                    variant="default"
+                    size={38}
+                    radius="md"
+                    aria-label="Increase quantity"
+                    disabled={quantity >= stock || stock <= 0}
+                    onClick={() =>
+                      setProductSelection({
+                        quantity: Math.min(stock, quantity + 1),
+                        message: "",
+                      })
+                    }
+                  >
+                    <Plus size={16} />
+                  </ActionIcon>
+                </Group>
+
               )}
             </Group>
 
