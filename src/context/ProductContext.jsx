@@ -39,9 +39,21 @@ const mapProduct = (product, categories = []) => {
     ...product,
     id: product._id || product.id,
     title: product.name || product.title,
-    stock: Number.isSafeInteger(Number(product.stock)) && Number(product.stock) >= 0
-      ? Number(product.stock)
-      : 0,
+
+      stock: Number.isSafeInteger(Number(product.stock)) && Number(product.stock) >= 0
+        ? Number(product.stock)
+        : 0,
+      variants: Array.isArray(product.variants)
+        ? product.variants.map((variant) => ({
+            ...variant,
+            price: Number(variant.price) || 0,
+            stock: Number.isSafeInteger(Number(variant.stock)) && Number(variant.stock) >= 0
+              ? Number(variant.stock)
+              : 0,
+            images: (variant.images || []).map(fileUrl).filter(Boolean),
+          }))
+        : [],
+
     image: images[0] || "",
     images,
     categoryId,

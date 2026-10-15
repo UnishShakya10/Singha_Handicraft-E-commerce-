@@ -529,11 +529,12 @@ const Shop = ({ adminMode = false }) => {
                       }}
                     />
                   </Group>
-                </section>
+              </section>
 
-                <section className="product-editor-section">
-                  <div>
-                    <Text fw={700}>Product story</Text>
+<section className="product-editor-section">
+  <div>
+    <Text fw={700}>Product story</Text>
+
                     <Text size="xs" c="dimmed">Shown in the tabs on the product page. Write in your own words.</Text>
                   </div>
                   <Textarea

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
   Accordion,
@@ -31,16 +31,12 @@ import { formatPrice } from "../lib/api";
 import Cards from "../component/Cards";
 import ProductGallery from "../component/ProductGallery";
 
-// Replace with your number in international format, digits only (no +)
-const WHATSAPP_NUMBER = "977XXXXXXXXXX";
-
-// Colors used on this page (change here to change everywhere)
+const WHATSAPP_NUMBER = "9779861616232";
 const GOLD = "#c9a227";
 const INK = "#14110d";
 const CREAM = "#f7f3ea";
 const LINE = "rgba(20, 17, 13, 0.12)";
 
-// Small heading with a short gold line under it
 const SectionTitle = ({ eyebrow, children }) => (
   <div>
     {eyebrow && (
@@ -55,30 +51,156 @@ const SectionTitle = ({ eyebrow, children }) => (
   </div>
 );
 
+const getVariantId = (variant, index) =>
+  String(variant._id || variant.id || `index:${index}`);
+
+const getSwatchColor = (finish) => {
+  const finishName = String(finish || "").toLowerCase();
+  if (finishName.includes("gold")) return "#C9A227";
+  if (finishName.includes("silver")) return "#C0C0C0";
+  if (finishName.includes("antique")) return "#795548";
+  if (finishName.includes("black")) return "#252525";
+  if (finishName.includes("bronze")) return "#CD7F32";
+  if (finishName.includes("copper")) return "#B87333";
+  return "#D6B36A";
+};
+
+const FINISH_OPTIONS = [
+  { name: "Gold", color: "#C9A227" },
+  { name: "Silver", color: "#C0C0C0" },
+  { name: "Antique", color: "#795548" },
+];
+
+const normalizeFinish = (finish) => {
+  const value = String(finish || "").trim().toLowerCase();
+  if (value.includes("gold")) return "gold";
+  if (value.includes("silver")) return "silver";
+  if (value.includes("antique")) return "antique";
+  return value;
+};
+
+const matchesFinish = (variantFinish, optionName) =>
+  normalizeFinish(variantFinish) === normalizeFinish(optionName);
+
 const ProductDetail = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { products, productsLoading, productsError } = useProducts();
   const { addItem } = useCart();
   const { isSaved, toggleItem } = useWishlist();
-  const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const [selection, setSelection] = useState({ productId, quantity: 1, message: "" });
-  const quantity = selection.productId === productId ? selection.quantity : 1;
-  const cartMessage = selection.productId === productId ? selection.message : "";
 
-  const product = products.find((item) => item.id === productId && item.isActive !== false);
-  const stock = Number(product?.stock || 0);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [selectedVariantId, setSelectedVariantId] = useState("");
+  const [selection, setSelection] = useState({
+    productId,
+    quantity: 1,
+    message: "",
+  });
+
+  const product = products.find(
+    (item) =>
+      String(item.id) === String(productId) &&
+      item.isActive !== false
+  );
+
+  const activeVariants = (product?.variants || []).filter(
+    (variant) => variant.isActive !== false
+  );
+
+  // Gold is the original product. Silver and Antique are separate variants.
+  useEffect(() => {
+    if (!product) return;
+
+    if (selectedVariantId === "default:gold") return;
+
+    const selectedExists = activeVariants.some(
+      (variant, index) => getVariantId(variant, index) === selectedVariantId
+    );
+
+    if (!selectedExists) setSelectedVariantId("default:gold");
+  }, [productId, product, activeVariants, selectedVariantId]);
+
+  const selectedVariant =
+    selectedVariantId === "default:gold"
+      ? null
+      : activeVariants.find(
+          (variant, index) => getVariantId(variant, index) === selectedVariantId
+        ) || null;
+
+  const selectedFinish = selectedVariant
+    ? normalizeFinish(selectedVariant.finish)
+    : "gold";
+
+  const currentPrice = selectedVariant
+    ? Number(selectedVariant.price)
+    : Number(product?.price || 0);
+
+  const currentStock = selectedVariant
+    ? Number(selectedVariant.stock || 0)
+    : Number(product?.stock || 0);
+
+  const currentImages = selectedVariant?.images?.length
+    ? selectedVariant.images
+    : product?.images?.length
+      ? product.images
+      : product?.image
+        ? [product.image]
+        : [];
+
+  const quantity =
+    selection.productId === productId ? selection.quantity : 1;
+  const cartMessage =
+    selection.productId === productId ? selection.message : "";
+
   const availabilityKnown = !productsLoading && !productsError;
-  const outOfStock = availabilityKnown && stock < 1;
+  const outOfStock = availabilityKnown && currentStock < 1;
   const canPurchase = availabilityKnown && !outOfStock;
 
-  const setProductSelection = (updates) =>
+  const setProductSelection = (updates) => {
     setSelection((current) => ({
       productId,
       quantity: current.productId === productId ? current.quantity : 1,
       message: current.productId === productId ? current.message : "",
       ...updates,
     }));
+  };
+
+  const addSelectedQuantity = () => {
+    if (selectedVariantId !== "default:gold" && !selectedVariant) {
+      setProductSelection({
+        message: "Please select a finish before adding this product to your cart.",
+      });
+      return false;
+    }
+
+    const cartProduct = selectedVariant
+      ? {
+          ...product,
+          price: currentPrice,
+          stock: currentStock,
+          images: currentImages,
+          image: currentImages[0] || product.image,
+          selectedVariant: {
+            id: String(
+              selectedVariant._id ||
+              selectedVariant.id ||
+              selectedVariant.finish
+            ),
+            finish: selectedVariant.finish,
+            sku: selectedVariant.sku || "",
+            price: currentPrice,
+          },
+        }
+      : product;
+
+    const result = addItem(cartProduct, quantity);
+
+    setProductSelection({
+      message: result.ok ? "" : result.message,
+    });
+
+    return result.ok;
+  };
 
   if (!product) {
     return (
@@ -100,34 +222,38 @@ const ProductDetail = () => {
   }
 
   const isProductSaved = isSaved(product.id);
-  const addSelectedQuantity = () => {
-    const result = addItem(product, quantity);
-    setProductSelection({ message: result.ok ? "" : result.message });
-    return result.ok;
-  };
+
   const detailSections = [
-    ["Description", product.description?.trim() || "Description details have not been provided for this piece yet."],
-    ["Iconography", product.iconography?.trim() || "Iconography details have not been provided for this piece yet."],
+    [
+      "Description",
+      product.description?.trim() ||
+        "Description details have not been provided for this piece yet.",
+    ],
+    [
+      "Iconography",
+      product.iconography?.trim() ||
+        "Iconography details have not been provided for this piece yet.",
+    ],
     [
       "Spiritual significance",
-      product.significance?.trim()
-        || product.spiritualPresence?.trim()
-        || "Spiritual significance details have not been provided for this piece yet.",
+      product.significance?.trim() ||
+        product.spiritualPresence?.trim() ||
+        "Spiritual significance details have not been provided for this piece yet.",
     ],
   ];
-  const hasLongDetails = detailSections.reduce((total, [, content]) => total + content.length, 0) > 700;
-  const images = product.images?.length
-    ? product.images
-    : product.image
-      ? [product.image]
-      : [];
+
+  const hasLongDetails =
+    detailSections.reduce((total, [, content]) => total + content.length, 0) > 700;
+
+  const images = currentImages;
 
   const related = products
     .filter(
       (item) =>
         item.id !== product.id &&
         item.isActive !== false &&
-        (item.category === product.category || item.collection === product.collection)
+        (item.category === product.category ||
+          item.collection === product.collection)
     )
     .slice(0, 4);
 
@@ -135,7 +261,7 @@ const ProductDetail = () => {
     "Each statue is handcrafted in Nepal, so slight variations in finish, patina, and dimensions may occur. These pieces are intended for devotional, decorative, or collector use and may differ slightly from the photography due to natural hand-finishing and lighting.";
 
   const whatsappLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-    `Hello, I'm interested in ${product.title}`
+    `Hello, I'm interested in ${product.title} - ${selectedVariant?.finish || "Gold"} finish`
   )}`;
 
   const specs = [
@@ -163,12 +289,15 @@ const ProductDetail = () => {
           Back to collection
         </Button>
 
-        <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={64} style={{ alignItems: "start" }}>
-          {/* LEFT: gallery (stays in view while you scroll on desktop) */}
+        <SimpleGrid
+          cols={{ base: 1, lg: 2 }}
+          spacing={64}
+          style={{ alignItems: "start" }}
+        >
           <div className="product-gallery-sticky">
             {images.length > 0 ? (
               <ProductGallery
-                key={product.id}
+                key={`${product.id}-${selectedVariant?.finish || "default"}`}
                 images={images}
                 name={product.title}
               />
@@ -179,7 +308,6 @@ const ProductDetail = () => {
             )}
           </div>
 
-          {/* RIGHT: product info */}
           <Stack gap="lg">
             <Badge
               color="gold"
@@ -193,37 +321,52 @@ const ProductDetail = () => {
               {product.category}
             </Badge>
 
-            <Title order={1} ff="heading" fz={{ base: 34, md: 48 }} fw={500} lh={1.1}>
+            <Title
+              order={1}
+              ff="heading"
+              fz={{ base: 34, md: 48 }}
+              fw={500}
+              lh={1.1}
+            >
               {product.title}
             </Title>
 
             <div style={{ width: 56, height: 2, background: GOLD }} />
 
-            <Text c="dimmed" size="lg" lh={1.8} lineClamp={3}>
-              {product.description}
-            </Text>
-
-            {/* Price */}
+            {/* PRICE */}
             <Group align="flex-end" gap="sm" py="xs">
               <Text ff="heading" fw={600} fz={42} lh={1} c="dark">
-                {formatPrice(product.price)}
+                {formatPrice(currentPrice)}
               </Text>
-              {Number(product.compareAtPrice) > Number(product.price) && (
-                <Text size="md" c="dimmed" td="line-through">
-                  {formatPrice(product.compareAtPrice)}
-                </Text>
-              )}
+
+              {!selectedVariant &&
+                Number(product.compareAtPrice) > Number(product.price) && (
+                  <Text size="md" c="dimmed" td="line-through">
+                    {formatPrice(product.compareAtPrice)}
+                  </Text>
+                )}
             </Group>
 
             <Group gap="sm" align="center">
               <Badge
-                color={!availabilityKnown ? "gray" : outOfStock ? "red" : "green"}
+                color={
+                  !availabilityKnown
+                    ? "gray"
+                    : outOfStock
+                      ? "red"
+                      : "green"
+                }
                 variant="light"
               >
                 {!availabilityKnown
-                  ? productsLoading ? "Checking stock" : "Availability unavailable"
-                  : outOfStock ? "Out of Stock" : `In Stock · ${stock} available`}
+                  ? productsLoading
+                    ? "Checking stock"
+                    : "Availability unavailable"
+                  : outOfStock
+                    ? "Out of Stock"
+                    : `In Stock · ${currentStock} available`}
               </Badge>
+
               {canPurchase && (
                 <Group gap={0} align="center">
                   <ActionIcon
@@ -231,7 +374,7 @@ const ProductDetail = () => {
                     size={38}
                     radius="md"
                     aria-label="Decrease quantity"
-                    disabled={quantity <= 1 || stock <= 0}
+                    disabled={quantity <= 1}
                     onClick={() =>
                       setProductSelection({
                         quantity: Math.max(1, quantity - 1),
@@ -251,10 +394,10 @@ const ProductDetail = () => {
                     size={38}
                     radius="md"
                     aria-label="Increase quantity"
-                    disabled={quantity >= stock || stock <= 0}
+                    disabled={quantity >= currentStock}
                     onClick={() =>
                       setProductSelection({
-                        quantity: Math.min(stock, quantity + 1),
+                        quantity: Math.min(currentStock, quantity + 1),
                         message: "",
                       })
                     }
@@ -262,13 +405,11 @@ const ProductDetail = () => {
                     <Plus size={16} />
                   </ActionIcon>
                 </Group>
-
               )}
             </Group>
 
             {cartMessage && <Alert color="red">{cartMessage}</Alert>}
 
-            {/* Buttons */}
             <Group gap="md" className="product-actions">
               <Button
                 color="gold"
@@ -285,6 +426,7 @@ const ProductDetail = () => {
               >
                 Add to cart
               </Button>
+
               <Button
                 color="dark"
                 c="white"
@@ -301,6 +443,7 @@ const ProductDetail = () => {
               >
                 Buy now
               </Button>
+
               <Button
                 variant="outline"
                 color={isProductSaved ? "red" : "dark"}
@@ -321,6 +464,7 @@ const ProductDetail = () => {
               >
                 {isProductSaved ? "Saved to wishlist" : "Add to wishlist"}
               </Button>
+
               <Button
                 component="a"
                 href={whatsappLink}
@@ -340,12 +484,16 @@ const ProductDetail = () => {
               </Button>
             </Group>
 
-            {/* Specs */}
+            <Text c="dimmed" size="lg" lh={1.8} lineClamp={3}>
+              {product.description}
+            </Text>
+
+            {/* DIMENSIONS AND PRODUCT SPECS */}
             <div
               style={{
                 borderTop: `1px solid ${LINE}`,
                 borderBottom: `1px solid ${LINE}`,
-                marginTop: 8,
+                marginTop: 4,
               }}
             >
               {specs.map(([label, value], index) => (
@@ -354,32 +502,126 @@ const ProductDetail = () => {
                   justify="space-between"
                   wrap="nowrap"
                   py="sm"
-                  style={{ borderTop: index === 0 ? "none" : `1px solid ${LINE}` }}
+                  style={{
+                    borderTop:
+                      index === 0 ? "none" : `1px solid ${LINE}`,
+                  }}
                 >
                   <Text size="xs" c="dimmed" tt="uppercase" lts={1.5}>
                     {label}
                   </Text>
-                  <Text size="sm" fw={600} ta="right" style={{ whiteSpace: "pre-line" }}>
+                  <Text
+                    size="sm"
+                    fw={600}
+                    ta="right"
+                    style={{ whiteSpace: "pre-line" }}
+                  >
                     {value}
                   </Text>
                 </Group>
               ))}
             </div>
+
+            {/* FINISH SELECTOR - BELOW PRODUCT SPECIFICATIONS */}
+            {(
+              <Stack gap="sm">
+                <Group justify="space-between" align="center">
+                  <Text size="sm" fw={600}>Select finish</Text>
+                  <Text size="sm" c="dimmed">
+                    {selectedVariant?.finish || "Gold"}
+                  </Text>
+                </Group>
+
+                <Group gap="md">
+                  {FINISH_OPTIONS.map((finishOption) => {
+                    const isGold = finishOption.name === "Gold";
+                    const variantIndex = isGold
+                      ? -1
+                      : activeVariants.findIndex((variant) =>
+                          matchesFinish(
+                            variant.finish || variant.color || variant.name,
+                            finishOption.name
+                          )
+                        );
+                    const variant =
+                      variantIndex >= 0 ? activeVariants[variantIndex] : null;
+                    const variantId = isGold
+                      ? "default:gold"
+                      : variant
+                        ? getVariantId(variant, variantIndex)
+                        : "";
+                    const isSelected = isGold
+                      ? selectedFinish === "gold"
+                      : Boolean(variant && selectedVariant === variant);
+
+                    return (
+                      <Stack key={finishOption.name} gap={6} align="center">
+                        <button
+                          type="button"
+                          title={finishOption.name}
+                          aria-label={`Select ${finishOption.name} finish`}
+                          aria-pressed={isSelected}
+                          disabled={!isGold && !variant}
+                          onClick={() => {
+                            if (!isGold && !variant) return;
+                            setSelectedVariantId(variantId);
+                            setProductSelection({ quantity: 1, message: "" });
+                          }}
+                          style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: "50%",
+                            border: isSelected
+                              ? "3px solid #14110d"
+                              : "1px solid rgba(20,17,13,0.22)",
+                            outline: isSelected ? `2px solid ${GOLD}` : "none",
+                            outlineOffset: 3,
+                            background: finishOption.color,
+                            cursor: isGold || variant ? "pointer" : "not-allowed",
+                            opacity: isGold || variant ? 1 : 0.35,
+                            flexShrink: 0,
+                            boxShadow: isSelected
+                              ? "0 3px 10px rgba(0,0,0,0.18)"
+                              : "none",
+                          }}
+                        />
+                        <Text size="xs" c={isSelected ? "dark" : "dimmed"}>
+                          {finishOption.name}
+                        </Text>
+                      </Stack>
+                    );
+                  })}
+                </Group>
+                {!selectedVariant && selectedVariantId !== "default:gold" && (
+                  <Text size="xs" c="red">
+                    Please select an available finish.
+                  </Text>
+                )}
+              </Stack>
+            )}
+
+
           </Stack>
         </SimpleGrid>
 
         {/* ABOUT THIS PIECE */}
-        <section aria-labelledby="product-details-title" style={{ marginTop: 96 }}>
+        <section
+          aria-labelledby="product-details-title"
+          style={{ marginTop: 96 }}
+        >
           <Stack gap="lg" maw={1000}>
             <div id="product-details-title">
-              <SectionTitle eyebrow="Craft & meaning">About this piece</SectionTitle>
+              <SectionTitle eyebrow="Craft & meaning">
+                About this piece
+              </SectionTitle>
             </div>
 
             <div
               id="product-details-content"
               style={{
                 position: "relative",
-                maxHeight: hasLongDetails && !detailsExpanded ? 300 : "none",
+                maxHeight:
+                  hasLongDetails && !detailsExpanded ? 300 : "none",
                 overflow: "hidden",
               }}
             >
@@ -387,11 +629,20 @@ const ProductDetail = () => {
                 {detailSections.map(([heading, content]) => (
                   <div
                     key={heading}
-                    style={{ borderTop: `1px solid ${LINE}`, paddingBlock: "1.5rem" }}
+                    style={{
+                      borderTop: `1px solid ${LINE}`,
+                      paddingBlock: "1.5rem",
+                    }}
                   >
                     <Grid gutter="xl" align="start">
                       <Grid.Col span={{ base: 12, sm: 3 }}>
-                        <Text size="xs" fw={700} tt="uppercase" lts={2} c="gold.8">
+                        <Text
+                          size="xs"
+                          fw={700}
+                          tt="uppercase"
+                          lts={2}
+                          c="gold.8"
+                        >
                           {heading}
                         </Text>
                       </Grid.Col>
@@ -405,7 +656,6 @@ const ProductDetail = () => {
                 ))}
               </Stack>
 
-              {/* soft fade at the bottom while collapsed */}
               {hasLongDetails && !detailsExpanded && (
                 <div
                   style={{
@@ -414,7 +664,8 @@ const ProductDetail = () => {
                     right: 0,
                     bottom: 0,
                     height: 90,
-                    background: "linear-gradient(to bottom, rgba(255,255,255,0), var(--mantine-color-body, #fff))",
+                    background:
+                      "linear-gradient(to bottom, rgba(255,255,255,0), var(--mantine-color-body, #fff))",
                     pointerEvents: "none",
                   }}
                 />
@@ -432,7 +683,9 @@ const ProductDetail = () => {
                 w="fit-content"
                 aria-expanded={detailsExpanded}
                 aria-controls="product-details-content"
-                onClick={() => setDetailsExpanded((expanded) => !expanded)}
+                onClick={() =>
+                  setDetailsExpanded((expanded) => !expanded)
+                }
               >
                 View {detailsExpanded ? "less" : "more"}
               </Button>
@@ -466,19 +719,28 @@ const ProductDetail = () => {
           mt={40}
           styles={{
             item: { borderBottom: `1px solid ${LINE}` },
-            control: { padding: "1.25rem 0" },
-            label: { fontFamily: "var(--mantine-font-family-headings)", fontSize: 20 },
+            control: {
+              padding: "1.25rem 0",
+            },
+            label: {
+              fontFamily: "var(--mantine-font-family-headings)",
+              fontSize: 20,
+            },
             content: { paddingBottom: "1.25rem" },
           }}
         >
           <Accordion.Item value="care">
-            <Accordion.Control>How to care for your statue</Accordion.Control>
+            <Accordion.Control>
+              How to care for your statue
+            </Accordion.Control>
             <Accordion.Panel>
               <Stack gap="md">
                 <Text c="dimmed" lh={1.8}>
-                  Our statues are handcrafted works of Buddhist art. Proper care helps
-                  preserve their gilding, intricate details, and traditional finish.
+                  Our statues are handcrafted works of Buddhist art. Proper
+                  care helps preserve their gilding, intricate details, and
+                  traditional finish.
                 </Text>
+
                 <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
                   {[
                     [
@@ -507,49 +769,111 @@ const ProductDetail = () => {
                     ],
                   ].map(([title, description]) => (
                     <div key={title}>
-                      <Text size="sm" fw={700} c="dark" mb={4}>{title}</Text>
-                      <Text size="sm" c="dimmed" lh={1.7}>{description}</Text>
+                      <Text size="sm" fw={700} c="dark" mb={4}>
+                        {title}
+                      </Text>
+                      <Text size="sm" c="dimmed" lh={1.7}>
+                        {description}
+                      </Text>
                     </div>
                   ))}
                 </SimpleGrid>
               </Stack>
             </Accordion.Panel>
           </Accordion.Item>
+
           <Accordion.Item value="shipping">
-            <Accordion.Control>Shipping &amp; returns</Accordion.Control>
+            <Accordion.Control>
+              Shipping &amp; returns
+            </Accordion.Control>
             <Accordion.Panel>
               <Stack gap="xl">
                 <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl">
                   <div>
-                    <Text fw={700} c="dark" mb="xs">Shipping within Nepal</Text>
+                    <Text fw={700} c="dark" mb="xs">
+                      Shipping within Nepal
+                    </Text>
                     <List c="dimmed" size="sm" spacing="xs" withPadding>
-                      <List.Item>Delivery is available to major cities and locations across Nepal.</List.Item>
-                      <List.Item>Delivery time depends on the destination and product availability.</List.Item>
-                      <List.Item>Large or heavy statues may need special handling and delivery arrangements.</List.Item>
-                      <List.Item>Any shipping charges will be shown at checkout or confirmed before dispatch.</List.Item>
-                      <List.Item>Please ensure your delivery address and contact number are correct. Order and delivery updates are provided where available.</List.Item>
+                      <List.Item>
+                        Delivery is available to major cities and locations
+                        across Nepal.
+                      </List.Item>
+                      <List.Item>
+                        Delivery time depends on the destination and product
+                        availability.
+                      </List.Item>
+                      <List.Item>
+                        Large or heavy statues may need special handling and
+                        delivery arrangements.
+                      </List.Item>
+                      <List.Item>
+                        Any shipping charges will be shown at checkout or
+                        confirmed before dispatch.
+                      </List.Item>
+                      <List.Item>
+                        Please ensure your delivery address and contact number
+                        are correct. Order and delivery updates are provided
+                        where available.
+                      </List.Item>
                     </List>
                   </div>
+
                   <div>
-                    <Text fw={700} c="dark" mb="xs">International shipping</Text>
+                    <Text fw={700} c="dark" mb="xs">
+                      International shipping
+                    </Text>
                     <List c="dimmed" size="sm" spacing="xs" withPadding>
-                      <List.Item>International orders are shipped from Nepal through DHL Express.</List.Item>
-                      <List.Item>Estimated delivery is 4–10 business days after dispatch, depending on destination.</List.Item>
-                      <List.Item>Insured shipping is provided for eligible statue orders. A tracking number is shared after dispatch.</List.Item>
-                      <List.Item>Customers are responsible for customs duties, import taxes, and clearance charges imposed by their country.</List.Item>
-                      <List.Item>Customs clearance and other circumstances beyond our control may affect delivery times.</List.Item>
+                      <List.Item>
+                        International orders are shipped from Nepal through
+                        DHL Express.
+                      </List.Item>
+                      <List.Item>
+                        Estimated delivery is 4–10 business days after
+                        dispatch, depending on destination.
+                      </List.Item>
+                      <List.Item>
+                        Insured shipping is provided for eligible statue
+                        orders. A tracking number is shared after dispatch.
+                      </List.Item>
+                      <List.Item>
+                        Customers are responsible for customs duties, import
+                        taxes, and clearance charges imposed by their country.
+                      </List.Item>
+                      <List.Item>
+                        Customs clearance and other circumstances beyond our
+                        control may affect delivery times.
+                      </List.Item>
                     </List>
                   </div>
                 </SimpleGrid>
+
                 <div>
-                  <Text fw={700} c="dark" mb="xs">Returns &amp; exchanges</Text>
+                  <Text fw={700} c="dark" mb="xs">
+                    Returns &amp; exchanges
+                  </Text>
                   <List c="dimmed" size="sm" spacing="xs" withPadding>
-                    <List.Item>Eligible products may be returned within 14 days of delivery in their original, unused, and undamaged condition, preferably with original packaging.</List.Item>
-                    <List.Item>Contact us with your order details before sending an item back. Photographs may be requested to help assess the issue.</List.Item>
-                    <List.Item>Damage caused by improper handling, installation, or care may not qualify for a return. Return arrangements and costs depend on the reason.</List.Item>
-                    <List.Item>If an item arrives damaged or incorrect, contact us as soon as possible so we can assist.</List.Item>
+                    <List.Item>
+                      Eligible products may be returned within 14 days of
+                      delivery in their original, unused, and undamaged
+                      condition, preferably with original packaging.
+                    </List.Item>
+                    <List.Item>
+                      Contact us with your order details before sending an
+                      item back. Photographs may be requested to help assess
+                      the issue.
+                    </List.Item>
+                    <List.Item>
+                      Damage caused by improper handling, installation, or
+                      care may not qualify for a return. Return arrangements
+                      and costs depend on the reason.
+                    </List.Item>
+                    <List.Item>
+                      If an item arrives damaged or incorrect, contact us as
+                      soon as possible so we can assist.
+                    </List.Item>
                   </List>
                 </div>
+
                 <div
                   style={{
                     borderLeft: `2px solid ${GOLD}`,
@@ -557,10 +881,12 @@ const ProductDetail = () => {
                     padding: "1rem 1.25rem",
                   }}
                 >
-                  <Text fw={700} c="dark" mb={4}>Consecrated statues</Text>
+                  <Text fw={700} c="dark" mb={4}>
+                    Consecrated statues
+                  </Text>
                   <Text size="sm" c="dimmed" lh={1.7}>
-                    Statues that have undergone consecration or religious rituals
-                    are non-returnable and non-refundable.
+                    Statues that have undergone consecration or religious
+                    rituals are non-returnable and non-refundable.
                   </Text>
                 </div>
               </Stack>

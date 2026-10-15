@@ -6,13 +6,14 @@ import {
   Container,
   Divider,
   Group,
+  Modal,
   Paper,
   SimpleGrid,
   Stack,
   Text,
   Title,
 } from "@mantine/core";
-import { Eye } from "lucide-react";
+import { Eye, XCircle } from "lucide-react";
 import { api, formatPrice } from "../lib/api";
 
 const normalizeOrderStatus = (status) =>
@@ -38,6 +39,8 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -55,6 +58,22 @@ const Orders = () => {
 
     loadOrders();
   }, []);
+
+  const handleCancel = async () => {
+    try {
+      setCancelling(true);
+      setMessage("");
+      const { data } = await api.patch(`/orders/${orderToCancel._id}/cancel`);
+      setOrders((prev) =>
+        prev.map((o) => (o._id === data._id ? { ...o, ...data } : o))
+      );
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Could not cancel the order.");
+    } finally {
+      setCancelling(false);
+      setOrderToCancel(null);
+    }
+  };
 
   return (
     <Container size="md" py={64}>
@@ -126,6 +145,16 @@ const Orders = () => {
 
               {/* Footer */}
               <Group justify="flex-end">
+                {normalizeOrderStatus(order.status) === "pending" && (
+                  <Button
+                    variant="light"
+                    color="red"
+                    leftSection={<XCircle size={16} />}
+                    onClick={() => setOrderToCancel(order)}
+                  >
+                    Cancel order
+                  </Button>
+                )}
                 <Button
                   component={Link}
                   to={`/invoice/${encodeURIComponent(order._id)}`}
@@ -141,6 +170,26 @@ const Orders = () => {
         ))}
       </Stack>
 
+      {/* Cancel confirmation */}
+      <Modal
+        opened={!!orderToCancel}
+        onClose={() => setOrderToCancel(null)}
+        title="Cancel order?"
+        centered
+      >
+        <Text size="sm">
+          {orderToCancel?.invoiceNumber || "This order"} will be cancelled.
+          This can't be undone.
+        </Text>
+        <Group justify="flex-end" mt="lg">
+          <Button variant="default" onClick={() => setOrderToCancel(null)}>
+            Keep order
+          </Button>
+          <Button color="red" loading={cancelling} onClick={handleCancel}>
+            Yes, cancel
+          </Button>
+        </Group>
+      </Modal>
     </Container>
   );
 };
