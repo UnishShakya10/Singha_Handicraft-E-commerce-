@@ -10,6 +10,7 @@ import Home from "./pages/Home";
 import ProductDetail from "./pages/ProductDetail";
 import NotFound from "./pages/NotFound";
 import Orders from "./pages/Orders";
+import OrderDetail from "./pages/OrderDetail";
 import Profile from "./pages/Profile";
 import CartPage from "./pages/CartPage";
 import InvoicePage from "./pages/InvoicePage";
@@ -64,6 +65,7 @@ const App = () => {
           <Route element={<PrivateRoute />}>
             <Route path="/profile" element={<Profile />} />
             <Route path="/orders" element={<Orders />} />
+            <Route path="/orders/:id" element={<OrderDetail />} />
             <Route path="/invoice/:orderId" element={<InvoicePage />} />
             <Route element={<CustomerRoute />}>
               <Route path="/cart" element={<CartPage />} />
