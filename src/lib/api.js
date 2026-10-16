@@ -94,3 +94,25 @@ export const formatPrice = (amount) =>
     currency: "NPR",
     maximumFractionDigits: 0,
   }).format(Number(amount));
+
+  export const fixUrl = (url) => {
+  const value = String(url || "");
+  if (!value || value.startsWith("data:")) return value;
+
+  try {
+    const parsed = new URL(value);
+
+    // Leave local addresses alone (localhost doesn't use https)
+    if (loopbackHosts.has(parsed.hostname.toLowerCase())) return value;
+
+    // Render only serves https on the standard port
+    if (parsed.hostname.endsWith("onrender.com")) {
+      parsed.port = "";
+      parsed.protocol = "https:";
+    }
+
+    return parsed.toString();
+  } catch {
+    return value; // relative path or invalid URL: leave unchanged
+  }
+};

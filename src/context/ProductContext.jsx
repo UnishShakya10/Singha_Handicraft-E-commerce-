@@ -1,13 +1,16 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { products as initialProducts } from "../data/products";
-import { api, fileUrl } from "../lib/api";
+import { api, fileUrl, fixUrl } from "../lib/api";
 import { useAuth } from "./AuthContext";
 
 const ProductContext = createContext(null);
 
 const normalizeCategory = (value) =>
   String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+// Builds the image URL and removes the wrong port (:8080) if present
+const imageUrl = (value) => fixUrl(fileUrl(value));
 
 const mapProduct = (product, categories = []) => {
   const categoryValue = product.category;
@@ -32,7 +35,7 @@ const mapProduct = (product, categories = []) => {
       ? [product.image]
       : []
   )
-    .map(fileUrl)
+    .map(imageUrl)
     .filter(Boolean);
 
   return {
@@ -40,19 +43,19 @@ const mapProduct = (product, categories = []) => {
     id: product._id || product.id,
     title: product.name || product.title,
 
-      stock: Number.isSafeInteger(Number(product.stock)) && Number(product.stock) >= 0
-        ? Number(product.stock)
-        : 0,
-      variants: Array.isArray(product.variants)
-        ? product.variants.map((variant) => ({
-            ...variant,
-            price: Number(variant.price) || 0,
-            stock: Number.isSafeInteger(Number(variant.stock)) && Number(variant.stock) >= 0
-              ? Number(variant.stock)
-              : 0,
-            images: (variant.images || []).map(fileUrl).filter(Boolean),
-          }))
-        : [],
+    stock: Number.isSafeInteger(Number(product.stock)) && Number(product.stock) >= 0
+      ? Number(product.stock)
+      : 0,
+    variants: Array.isArray(product.variants)
+      ? product.variants.map((variant) => ({
+          ...variant,
+          price: Number(variant.price) || 0,
+          stock: Number.isSafeInteger(Number(variant.stock)) && Number(variant.stock) >= 0
+            ? Number(variant.stock)
+            : 0,
+          images: (variant.images || []).map(imageUrl).filter(Boolean),
+        }))
+      : [],
 
     image: images[0] || "",
     images,
@@ -173,7 +176,7 @@ export const ProductProvider = ({ children }) => {
     const body = new FormData();
     body.append("image", file);
     const { data } = await api.post("/products/upload-image", body);
-    return fileUrl(data.image);
+    return imageUrl(data.image);
   };
 
   const value = useMemo(

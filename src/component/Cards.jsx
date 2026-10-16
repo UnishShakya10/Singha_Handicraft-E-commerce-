@@ -16,6 +16,7 @@ import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
 import { useWishlist } from "../context/WishlistContext";
 import { formatPrice } from "../lib/api";
+import { fixUrl } from "../lib/api";
 
 const Cards = ({ product, onDelete }) => {
   const { addItem } = useCart();
@@ -64,7 +65,12 @@ const Cards = ({ product, onDelete }) => {
       className="product-card"
     >
       <div style={{ position: "relative" }}>
-        <Image src={product.image} alt={product.title} h={260} fit="cover" />
+        <Image
+              src={fixUrl(product.image || product.images?.[0])}
+              alt={product.title}
+              h={260}
+              fit="cover"
+        />
 
         <Badge
           pos="absolute"

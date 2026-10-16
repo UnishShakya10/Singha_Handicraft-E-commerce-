@@ -27,7 +27,7 @@ import {
 import { useProducts } from "../context/ProductContext";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
-import { formatPrice } from "../lib/api";
+import { formatPrice, fixUrl } from "../lib/api";
 import Cards from "../component/Cards";
 import ProductGallery from "../component/ProductGallery";
 
@@ -139,13 +139,17 @@ const ProductDetail = () => {
     ? Number(selectedVariant.stock || 0)
     : Number(product?.stock || 0);
 
-  const currentImages = selectedVariant?.images?.length
+  const rawImages = selectedVariant?.images?.length
     ? selectedVariant.images
     : product?.images?.length
       ? product.images
       : product?.image
         ? [product.image]
         : [];
+
+  const currentImages = rawImages.map((img) =>
+  typeof img === "string" ? fixUrl(img) : { ...img, url: fixUrl(img.url) }
+);      
 
   const quantity =
     selection.productId === productId ? selection.quantity : 1;
@@ -246,6 +250,7 @@ const ProductDetail = () => {
     detailSections.reduce((total, [, content]) => total + content.length, 0) > 700;
 
   const images = currentImages;
+  console.log("IMAGE URLS:", images);
 
   const related = products
     .filter(
