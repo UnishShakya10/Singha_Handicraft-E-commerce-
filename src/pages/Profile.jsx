@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import {
   Alert,
@@ -8,6 +9,7 @@ import {
   Group,
   Image,
   Loader,
+  NativeSelect,
   Paper,
   Stack,
   Text,
@@ -21,6 +23,70 @@ import {
   STATUS_COLORS,
   formatDate,
 } from "../lib/orders";
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const MonthlySpend = ({ orders }) => {
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth());
+  const [year, setYear] = useState(now.getFullYear());
+
+  // years that actually have orders, plus the current year
+  const years = useMemo(() => {
+    const set = new Set(orders.map((o) => new Date(o.createdAt).getFullYear()));
+    set.add(now.getFullYear());
+    return [...set].sort((a, b) => b - a);
+  }, [orders]);
+
+  const { total, count } = useMemo(() => {
+    const matching = orders.filter((o) => {
+      const d = new Date(o.createdAt);
+      return (
+        d.getMonth() === month &&
+        d.getFullYear() === year &&
+        o.status !== "cancelled"
+      );
+    });
+    return {
+      total: matching.reduce((sum, o) => sum + Number(o.total), 0),
+      count: matching.length,
+    };
+  }, [orders, month, year]);
+
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Group justify="space-between" align="flex-end">
+        <div>
+          <Text size="xs" c="dimmed">
+            Total spent in {MONTHS[month]} {year}
+          </Text>
+          <Text fw={700} size="xl">
+            {formatPrice(total)}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {count} {count === 1 ? "order" : "orders"}
+          </Text>
+        </div>
+
+        <Group gap="xs">
+          <NativeSelect
+            value={String(month)}
+            onChange={(e) => setMonth(Number(e.currentTarget.value))}
+            data={MONTHS.map((m, i) => ({ label: m, value: String(i) }))}
+          />
+          <NativeSelect
+            value={String(year)}
+            onChange={(e) => setYear(Number(e.currentTarget.value))}
+            data={years.map((y) => ({ label: String(y), value: String(y) }))}
+          />
+        </Group>
+      </Group>
+    </Paper>
+  );
+};
 
 const OrderCard = ({ order }) => (
   <Paper withBorder radius="md" style={{ overflow: "hidden" }}>
@@ -111,6 +177,10 @@ const Profile = () => {
             {user?.role}
           </Text>
         </Group>
+
+        {!loading && !error && orders.length > 0 && (
+          <MonthlySpend orders={orders} />
+        )}
 
         <Group justify="space-between" align="baseline">
           <Title order={3}>Your orders</Title>
