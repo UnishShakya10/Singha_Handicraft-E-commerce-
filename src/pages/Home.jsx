@@ -112,7 +112,7 @@ const Home = () => {
             <div className="relative">
               <div className="absolute -left-4 -top-4 h-full w-full border border-gold" />
               <Image
-                src="/work.jpg"
+                src="/design.webp"
                 alt="Workshop sculpture"
                 h={520}
                 fit="cover"

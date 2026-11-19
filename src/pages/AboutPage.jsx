@@ -162,7 +162,7 @@ const Craftsmanship = () => (
   <section className="about-craft about-section">
     <div className="about-shell about-split-layout">
       <Reveal className="about-image-frame about-craft-image">
-        <img src="/work.jpg" alt="A Patan artisan hand-finishing a sculpture" loading="lazy" />
+        <img src="/uploads/wax making.webp" alt="A Patan artisan hand-finishing a sculpture" loading="lazy" />
         <span className="about-image-caption">The atelier · Patan, Nepal</span>
       </Reveal>
       <Reveal className="about-copy-block" delay={100}>
@@ -344,7 +344,7 @@ const WhySingha = () => (
 
 const AboutCTA = () => (
   <section className="about-final">
-    <img src="/Golden Buddha Shrine with Incense and Candlelight.png" alt="" loading="lazy" />
+    <img src="/about page.png" alt="" loading="lazy" />
     <div className="about-final-shade" />
     <Reveal className="about-final-content">
       <p className="about-eyebrow">A work to keep for generations</p>
